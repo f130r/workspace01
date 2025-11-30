@@ -8,17 +8,19 @@ if "board" not in st.session_state:
 if "turn" not in st.session_state:
     st.session_state.turn = "○"
 
+# 勝敗判定
 def check_winner(board):
     wins = [
-        [0,1,2],[3,4,5],[6,7,8],  # 横
-        [0,3,6],[1,4,7],[2,5,8],  # 縦
-        [0,4,8],[2,4,6]           # 斜め
+        [0,1,2],[3,4,5],[6,7,8],   # 横
+        [0,3,6],[1,4,7],[2,5,8],   # 縦
+        [0,4,8],[2,4,6]            # 斜め
     ]
     for a,b,c in wins:
         if board[a] != "" and board[a] == board[b] == board[c]:
             return board[a]
     return None
 
+# クリック処理
 def click_cell(i):
     if st.session_state.board[i] == "":
         st.session_state.board[i] = st.session_state.turn
@@ -26,21 +28,20 @@ def click_cell(i):
 
 st.title("⭕❌ マルバツゲーム")
 
-# ボタンスタイル（マス詰め＋クリック文字大きく）
-button_style = """
+# CSSでボタンサイズと文字サイズを調整
+st.markdown("""
 <style>
 div.stButton > button {
     width: 100px !important;
     height: 100px !important;
-    font-size: 180px !important;  /* クリック後の文字を3倍に */
+    font-size: 180px !important;   /* クリックした文字を大きく表示 */
     padding: 0 !important;
     margin: 0 !important;
 }
 </style>
-"""
-st.markdown(button_style, unsafe_allow_html=True)
+""", unsafe_allow_html=True)
 
-# 3x3 のマス表示
+# 3x3のマス表示
 for row in range(3):
     cols = st.columns(3, gap="small")
     for col in range(3):
