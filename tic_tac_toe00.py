@@ -1,66 +1,69 @@
 import streamlit as st
 
-st.title("マルバツゲーム（Tic-Tac-Toe）")
+st.set_page_config(page_title="Tic Tac Toe", layout="centered")
 
+# 初期化
 if "board" not in st.session_state:
-    st.session_state.board = [["" for _ in range(3)] for _ in range(3)]
-    st.session_state.turn = "O"
-    st.session_state.winner = None
+    st.session_state.board = [""] * 9
+if "turn" not in st.session_state:
+    st.session_state.turn = "○"
+
 
 def check_winner(board):
-    for i in range(3):
-        if board[i][0] != "" and all(board[i][j] == board[i][0] for j in range(3)):
-            return board[i][0]
-        if board[0][i] != "" and all(board[j][i] == board[0][i] for j in range(3)):
-            return board[0][i]
-
-    if board[0][0] != "" and all(board[i][i] == board[0][0] for i in range(3)):
-        return board[0][0]
-    if board[0][2] != "" and all(board[i][2-i] == board[0][2] for i in range(3)):
-        return board[0][2]
-
-    # 引き分け
-    if all(board[i][j] != "" for i in range(3) for j in range(3)):
-        return "Draw"
+    wins = [
+        [0, 1, 2], [3, 4, 5], [6, 7, 8],  # 横
+        [0, 3, 6], [1, 4, 7], [2, 5, 8],  # 縦
+        [0, 4, 8], [2, 4, 6]              # 斜め
+    ]
+    for a, b, c in wins:
+        if board[a] != "" and board[a] == board[b] == board[c]:
+            return board[a]
     return None
 
-# ボタンのスタイル調整（マスの間隔を詰める）
+
+def click_cell(i):
+    if st.session_state.board[i] == "":
+        st.session_state.board[i] = st.session_state.turn
+        st.session_state.turn = "×" if st.session_state.turn == "○" else "○"
+
+
+st.title("⭕❌ マルバツゲーム")
+
+winner = check_winner(st.session_state.board)
+
+# --- UI 改善ポイント ---
+# ・マス間の余白なし → オセロみたいに詰まって見える
+# ・フォントサイズを大きく → 視認性アップ
 button_style = """
-<style>
-button[kind="secondary"] {
-    width: 80px !important;
-    height: 80px !important;
-    font-size: 32px !important;
-    padding: 0 !important;
-}
-</style>
+    <style>
+    div.stButton > button {
+        width: 80px;
+        height: 80px;
+        font-size: 45px;
+        padding: 0;
+    }
+    </style>
 """
 st.markdown(button_style, unsafe_allow_html=True)
 
-for i in range(3):
-    cols = st.columns(3, gap="small")  # マスの間隔を縮める
-    for j in range(3):
-        cell = st.session_state.board[i][j]
+# --- マス表示 (3x3) ---
+cols = st.columns(3)
+for i in range(9):
+    with cols[i % 3]:
+        if st.button(st.session_state.board[i] or " ", key=i):
+            if winner is None:
+                click_cell(i)
+    if (i + 1) % 3 == 0 and i < 8:
+        cols = st.columns(3)
 
-        if cell == "" and st.session_state.winner is None:
-            if cols[j].button(" ", key=f"{i}-{j}"):
-                st.session_state.board[i][j] = st.session_state.turn
-                st.session_state.turn = "X" if st.session_state.turn == "O" else "O"
-                st.session_state.winner = check_winner(st.session_state.board)
-                st.rerun()  # ← 即時反映させる
-        else:
-            cols[j].button(cell, key=f"{i}-{j}", disabled=True)
+# --- 勝敗表示 ---
+winner = check_winner(st.session_state.board)
 
-# 勝敗表示
-if st.session_state.winner:
-    if st.session_state.winner == "Draw":
-        st.info("引き分け！")
-    else:
-        st.success(f"{st.session_state.winner} の勝ち！")
+if winner:
+    st.success(f"🎉 勝者：{winner}")
+elif "" not in st.session_state.board:
+    st.info("引き分けです！")
 
-# リセット
 if st.button("リセット"):
-    st.session_state.board = [["" for _ in range(3)] for _ in range(3)]
-    st.session_state.turn = "O"
-    st.session_state.winner = None
-    st.rerun()
+    st.session_state.board = [""] * 9
+    st.session_state.turn = "○"
