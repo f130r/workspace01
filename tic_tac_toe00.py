@@ -47,7 +47,7 @@ for i in range(3):
                 st.session_state.board[i][j] = st.session_state.turn
                 st.session_state.turn = "X" if st.session_state.turn == "O" else "O"
                 st.session_state.winner = check_winner(st.session_state.board)
-                st.experimental_rerun()  # ← 即時反映させる
+                st.rerun()  # ← 即時反映させる
         else:
             cols[j].button(cell, key=f"{i}-{j}", disabled=True)
 
@@ -63,4 +63,4 @@ if st.button("リセット"):
     st.session_state.board = [["" for _ in range(3)] for _ in range(3)]
     st.session_state.turn = "O"
     st.session_state.winner = None
-    st.experimental_rerun()
+    st.rerun()
