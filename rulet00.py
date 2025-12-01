@@ -1,79 +1,98 @@
 import streamlit as st
-from PIL import Image
 import random
 import time
-import io
-
-# 1. ルーレット画像を読み込む（ご提示の画像を 'roulette_base.png' として保存したと仮定）
-#    ※ 実際にはユーザーに画像をアップロードしてもらう仕組みも可能です。
-try:
-    base_image = Image.open("roulette_base.png")
-except FileNotFoundError:
-    st.error(
-        "画像を読み込めませんでした。ファイル名を 'roulette_base.png' にして実行ファイルと同じディレクトリに置いてください。")
-    st.stop()
-
-# 2. 当たり判定と回転角度の定義
-# （この例では6等分で、角度は画像の中心から時計回り）
-OPTIONS = ["イギリス", "オランダ", "アメリカ", "カナダ", "ドイツ", "オーストラリア"]
-DEGREES_PER_OPTION = 360 / len(OPTIONS)
 
 
-def get_winning_angle(winning_option_index):
-    # 当たりセクションの中央を指す角度を計算
-    # 最初のセクションの開始位置を考慮して計算します
-    base_angle = winning_option_index * DEGREES_PER_OPTION
-    center_angle = base_angle + (DEGREES_PER_OPTION / 2)
-    # PILのrotateは反時計回りなので、360から引く
-    return 360 - center_angle
+def run_roulette(options, duration=1.5):
+    """
+    ルーレットを回すアニメーションを実行し、結果を返す
+    """
+    # 状態の初期化
+    st.session_state.result = None
+    st.session_state.spinning = True
+
+    # 1. 最終結果をランダムに決定
+    final_choice = random.choice(options)
+
+    # 2. アニメーション表示用のプレースホルダー
+    # st.empty()は、その場所の内容を動的に更新するために使用
+    status_text = st.empty()
+
+    # 3. アニメーションの実行
+    start_time = time.time()
+
+    # 短い時間で高速に表示を切り替える (スピニング演出)
+    while time.time() - start_time < duration:
+        current_spin = random.choice(options)
+        status_text.markdown(f"## 🌀 **Spinning...** 🎯 **{current_spin}**")
+        time.sleep(0.05)
+
+        # 4. 最終結果に近づくための「減速演出」
+    for delay in [0.2, 0.4, 0.6]:
+        status_text.markdown(f"## ⏳ **Slowing Down...** 🎯 **{final_choice}**")
+        time.sleep(delay)
+
+        # 5. 最終結果の表示とセッションステートの更新
+    status_text.markdown(f"## 🎉 **Result!** 🎉 **{final_choice}**")
+
+    # セッションステートを更新して、メインルーチンの結果表示セクションを有効にする
+    st.session_state.result = final_choice
+    st.session_state.spinning = False
+
+    # st.experimental_rerun() を削除しました
+    # 関数が終了し、Streamlitが再実行されるのを待ちます
 
 
-st.title("🎲 Streamlit動的ルーレット")
+# --- Streamlit UI設定 ---
 
-# プレースホルダーの準備
-image_placeholder = st.empty()
-progress_placeholder = st.empty()
+st.set_page_config(page_title="Streamlit Roulette", layout="centered")
+st.title("🎰 シンプルなルーレットアプリ")
 
-# 初期画像の表示
-image_placeholder.image(base_image, use_column_width=True)
+# 1. セッションステートの初期化
+if 'options_input' not in st.session_state:
+    st.session_state.options_input = "当たり, ハズレ, 大当たり, 再挑戦"
+if 'spinning' not in st.session_state:
+    st.session_state.spinning = False
+if 'result' not in st.session_state:
+    st.session_state.result = None
 
-if st.button("ルーレットを回す！"):
-    # 3. 結果の決定
-    winning_index = random.randrange(len(OPTIONS))
-    winning_label = OPTIONS[winning_index]
+# 2. 選択肢の入力エリア
+st.subheader("📝 選択肢の入力")
+options_text = st.text_area(
+    "カンマ区切りでルーレットの選択肢を入力してください:",
+    value=st.session_state.options_input,
+    height=100,
+    key="options_area",
+    help="例: 当たり, ハズレ, 大当たり, 再挑戦"
+)
+st.session_state.options_input = options_text
+options = [opt.strip() for opt in options_text.split(',') if opt.strip()]
 
-    # 4. アニメーション（回転演出）
-    with progress_placeholder.container():
-        st.subheader("ルーレット回転中...")
-        progress_bar = st.progress(0)
+st.markdown("---")
 
-        # 演出のステップ数と時間
-        animation_steps = 20
-        total_time = 2.0  # 2秒間の回転演出
-        delay = total_time / animation_steps
+# 3. ルーレットの実行ボタン
+st.subheader("🔄 ルーレット開始")
 
-        for step in range(animation_steps):
-            # プログレスバーの更新
-            progress_bar.progress(int((step + 1) / animation_steps * 100))
+if not options:
+    st.error("選択肢をカンマ区切りで入力してください。")
+else:
+    # スピンボタン。回転中は無効化
+    # `run_roulette`は、st.buttonが押された際に実行されます
+    if st.button("スピン！", disabled=st.session_state.spinning or not options):
+        run_roulette(options)
 
-            # 回転角度の計算（演出として大きく回転させ、徐々に減速するような動きも可能）
-            # ここではシンプルに、徐々に最終角度に近づくように計算
-            # ※ 実際には、高速で何度も回っているように見せるため、ランダムな角度や加速・減速の計算が必要
+    # 4. 現在の選択肢リストの表示
+    st.info(f"現在の選択肢: **{', '.join(options)}**")
 
-            current_rotation = (step * 50) + random.randint(0, 30)  # 演出用のランダムな回転
-            rotated_img = base_image.rotate(current_rotation, resample=Image.BICUBIC, expand=False)
+# 5. 結果表示エリア (st.session_state.resultが更新された後に表示される)
+if st.session_state.result and not st.session_state.spinning:
+    st.balloons()
+    st.subheader("✨ 結果発表 ✨")
+    st.success(f"選ばれたのは... **{st.session_state.result}** です！")
 
-            image_placeholder.image(rotated_img, use_column_width=True)
-            time.sleep(delay)
-
-    # 5. 最終結果の表示（画像を固定し、ポインターを当てる）
-    final_angle = get_winning_angle(winning_index)
-
-    # 最後に、決定した角度に正確に回転させて表示
-    final_rotated_img = base_image.rotate(final_angle, resample=Image.BICUBIC, expand=False)
-
-    # プログレスバーと「回転中」のテキストをクリア
-    progress_placeholder.empty()
-    image_placeholder.image(final_rotated_img, use_column_width=True)
-
-    st.success(f"🎊 当たりは **{winning_label}** です！")
+# 6. リセットボタン
+if st.button("リセット"):
+    st.session_state.result = None
+    st.session_state.spinning = False
+    # リセット時に状態をクリアするため、再実行は必要
+    st.rerun()
