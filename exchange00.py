@@ -28,8 +28,8 @@ if not df.empty:
     closes = df["Close"]
 
     # 最新価格の取得
-    # 修正点: シングルティッカーのため、キー指定は不要
-    last_usd = closes.iloc[-1]
+    # 修正点: .item() を追加し、Seriesから数値(float)に変換します
+    last_usd = closes.iloc[-1].item()
 
     # データのタイムゾーンを日本時間(JST)に変換して表示
     latest_timestamp = closes.index[-1].tz_convert('Asia/Tokyo').strftime('%Y-%m-%d %H:%M:%S')
