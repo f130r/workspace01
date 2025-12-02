@@ -9,12 +9,10 @@ st.title("USD/JPY & CAD/JPY リアルタイムレート")
 
 # 1. データ取得関数
 def get_rate_data():
-    # 1分足のデータを取得
+    # データを確実に動かすために、期間を5日間に、間隔を1時間に変更
     tickers = ["USDJPY=X", "CADJPY=X"]
-    # 変更点: 期間を5日間に、間隔を1時間に変更し、グラフの動きを保証します。
     df = yf.download(tickers, period="5d", interval="1h", progress=False)
 
-    # yfinanceがエラーコードを返した場合に備える
     if df.empty:
         return pd.DataFrame()
 
@@ -24,12 +22,9 @@ def get_rate_data():
 df = get_rate_data()
 
 if not df.empty:
-    # yfinanceのデータ構造からClose（終値）だけを抽出
-    # マルチインデックスの場合の処理
-    if isinstance(df.columns, pd.MultiIndex):
-        closes = df["Close"]
-    else:
-        closes = df["Close"] # 単一ティッカー等の場合（念のため）
+    # --- 修正点: データ処理の簡略化 ---
+    # マルチインデックスから終値（Close）だけを抽出。エラー回避のためiloc[-1]は使用しない
+    closes = df["Close"]
 
     # 最新価格の取得
     last_usd = closes["USDJPY=X"].iloc[-1]
@@ -41,7 +36,7 @@ if not df.empty:
     st.subheader("📊 データ鮮度チェック")
     st.markdown(f"**最終データ取得日時 (JST):** `{latest_timestamp}`")
     st.caption("取得データの最終5行:")
-    st.dataframe(closes.tail(5))  # 最後の5行のデータを表で表示
+    st.dataframe(closes.tail(5))
 
     # 3. メトリクス表示 (現在のレート)
     col1, col2 = st.columns(2)
@@ -51,7 +46,8 @@ if not df.empty:
         st.metric(label="CAD/JPY", value=f"{last_cad:.2f} 円")
 
     # 4. チャート表示
-    st.subheader("直近24時間の推移 (1分足)")
+    # --- 修正点: チャートのタイトルをデータに合わせて変更 ---
+    st.subheader("直近5日間の推移 (1時間足)")
     st.line_chart(closes)
 else:
     st.error("データの取得に失敗しました。")
