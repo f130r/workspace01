@@ -29,6 +29,14 @@ if not df.empty:
     last_usd = closes["USDJPY=X"].iloc[-1]
     last_cad = closes["CADJPY=X"].iloc[-1]
 
+    # データのタイムゾーンを日本時間(JST)に変換して表示
+    latest_timestamp = closes.index[-1].tz_convert('Asia/Tokyo').strftime('%Y-%m-%d %H:%M:%S')
+
+    st.subheader("📊 データ鮮度チェック")
+    st.markdown(f"**最終データ取得日時 (JST):** `{latest_timestamp}`")
+    st.caption("取得データの最終5行:")
+    st.dataframe(closes.tail(5))  # 最後の5行のデータを表で表示
+
     # 3. メトリクス表示 (現在のレート)
     col1, col2 = st.columns(2)
     with col1:
