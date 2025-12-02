@@ -2,7 +2,7 @@ import streamlit as st
 import yfinance as yf
 import time
 import pandas as pd
-import plotly.express as px
+import plotly.express as px  # ✅ 1. Plotlyインポートはここに集約
 
 # ページ設定
 st.set_page_config(page_title="FX Monitor", layout="wide")
@@ -10,8 +10,8 @@ st.title("USD/JPY & CAD/JPY リアルタイムレート")
 
 # 1. データ取得関数
 def get_rate_data():
-    # データを確実に動かすために、期間を5日間に、間隔を1時間に変更
     tickers = ["USDJPY=X", "CADJPY=X"]
+    # データを確実に動かすために、期間を5日間に、間隔を1時間に変更
     df = yf.download(tickers, period="5d", interval="1h", progress=False)
 
     if df.empty:
@@ -23,8 +23,7 @@ def get_rate_data():
 df = get_rate_data()
 
 if not df.empty:
-    # --- 修正点: データ処理の簡略化 ---
-    # マルチインデックスから終値（Close）だけを抽出。エラー回避のためiloc[-1]は使用しない
+    # マルチインデックスから終値（Close）だけを抽出。
     closes = df["Close"]
 
     # 最新価格の取得
@@ -46,17 +45,14 @@ if not df.empty:
     with col2:
         st.metric(label="CAD/JPY", value=f"{last_cad:.2f} 円")
 
-    import plotly.express as px  # <<< この行をファイルの先頭に追加
-
-    # ... (中略) ...
-
     # 4. チャート表示
     st.subheader("直近5日間の推移 (1時間足) - 縦幅ズーム済み")
 
-    # 1. Plotly用にデータを整形 (USDJPY=XとCADJPY=Xを一つの列にまとめる)
-    plot_df = closes.reset_index().melt(id_vars='Date', var_name='Currency', value_name='Rate')
+    # 1. Plotly用にデータを整形 (インデックスに強制的に'Date'という名前を付けてKeyErrorを回避)
+    plot_df = closes.reset_index().rename(columns={closes.index.name: 'Date'})
+    plot_df = plot_df.melt(id_vars='Date', var_name='Currency', value_name='Rate')
+
     # 2. 最新価格を取得し、Y軸の範囲を決定
-    # 最新のレートから±0.5円の範囲にズームする
     latest_rate = max(last_usd, last_cad)
     y_min = max(0, latest_rate - 0.5)
     y_max = latest_rate + 0.5
@@ -73,10 +69,10 @@ if not df.empty:
 
     # 4. Y軸の範囲を固定してズームイン
     fig.update_yaxes(range=[y_min, y_max])
-    fig.update_layout(hovermode="x unified")  # マウスオーバーで全データを表示
+    fig.update_layout(hovermode="x unified")
 
     # 5. Streamlitに表示
-    st.plotly_chart(fig, use_container_width=True)  # <<< st.line_chartからの変更点
+    st.plotly_chart(fig, use_container_width=True)
 else:
     st.error("データの取得に失敗しました。")
 
