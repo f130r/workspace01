@@ -2,16 +2,17 @@ import streamlit as st
 import yfinance as yf
 import time
 import pandas as pd
-import plotly.express as px  # ✅ 1. Plotlyインポートはここに集約
+import plotly.express as px  # Plotlyは縦軸最適化のため引き続き必要です
 
 # ページ設定
-st.set_page_config(page_title="FX Monitor", layout="wide")
-st.title("USD/JPY & CAD/JPY リアルタイムレート")
+st.set_page_config(page_title="USD/JPY Monitor", layout="wide")
+st.title("USD/JPY リアルタイムレート")
 
 # 1. データ取得関数
 def get_rate_data():
-    tickers = ["USDJPY=X", "CADJPY=X"]
-    # データを確実に動かすために、期間を5日間に、間隔を1時間に変更
+    # 修正点: USD/JPY のみを取得
+    tickers = ["USDJPY=X"]
+    # 期間を5日間に、間隔を1時間に変更
     df = yf.download(tickers, period="5d", interval="1h", progress=False)
 
     if df.empty:
@@ -23,12 +24,12 @@ def get_rate_data():
 df = get_rate_data()
 
 if not df.empty:
-    # マルチインデックスから終値（Close）だけを抽出。
+    # 修正点: シングルティッカーのため、'Close'列は Pandas Series となります
     closes = df["Close"]
 
     # 最新価格の取得
-    last_usd = closes["USDJPY=X"].iloc[-1]
-    last_cad = closes["CADJPY=X"].iloc[-1]
+    # 修正点: シングルティッカーのため、キー指定は不要
+    last_usd = closes.iloc[-1]
 
     # データのタイムゾーンを日本時間(JST)に変換して表示
     latest_timestamp = closes.index[-1].tz_convert('Asia/Tokyo').strftime('%Y-%m-%d %H:%M:%S')
@@ -39,31 +40,28 @@ if not df.empty:
     st.dataframe(closes.tail(5))
 
     # 3. メトリクス表示 (現在のレート)
-    col1, col2 = st.columns(2)
-    with col1:
-        st.metric(label="USD/JPY", value=f"{last_usd:.2f} 円")
-    with col2:
-        st.metric(label="CAD/JPY", value=f"{last_cad:.2f} 円")
+    st.metric(label="USD/JPY", value=f"{last_usd:.2f} 円")
+    # CAD/JPY のメトリクス表示は削除
 
     # 4. チャート表示
     st.subheader("直近5日間の推移 (1時間足) - 縦幅ズーム済み")
 
-    # 1. Plotly用にデータを整形 (インデックスに強制的に'Date'という名前を付けてKeyErrorを回避)
-    plot_df = closes.reset_index().rename(columns={closes.index.name: 'Date'})
-    plot_df = plot_df.melt(id_vars='Date', var_name='Currency', value_name='Rate')
+    # 1. Plotly用にデータを整形 (シングルティッカーのため melt は不要、列名を明確化)
+    plot_df = closes.reset_index()
+    plot_df.columns = ['Date', 'Rate'] # 列名を 'Date' と 'Rate' に強制的に設定
 
     # 2. 最新価格を取得し、Y軸の範囲を決定
-    latest_rate = max(last_usd, last_cad)
-    y_min = max(0, latest_rate - 0.5)
-    y_max = latest_rate + 0.5
+    # 最新のレートから±0.5円の範囲にズームする
+    y_min = max(0, last_usd - 0.5)
+    y_max = last_usd + 0.5
 
     # 3. Plotlyでチャートを作成
+    # 修正点: colorパラメーターを削除
     fig = px.line(
         plot_df,
         x='Date',
         y='Rate',
-        color='Currency',
-        title='USD/JPY と CAD/JPY の比較',
+        title='USD/JPY レート推移',
         labels={'Rate': 'レート (円)', 'Date': '日時'}
     )
 
@@ -77,6 +75,5 @@ else:
     st.error("データの取得に失敗しました。")
 
 # 5. スリープ防止（自動リロード）メカニズム
-# 60秒待機してからスクリプトを再実行します
 time.sleep(60)
 st.rerun()
