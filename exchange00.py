@@ -54,8 +54,7 @@ if not df.empty:
     st.subheader("直近5日間の推移 (1時間足) - 縦幅ズーム済み")
 
     # 1. Plotly用にデータを整形 (USDJPY=XとCADJPY=Xを一つの列にまとめる)
-    plot_df = closes.reset_index().melt(id_vars='index', var_name='Currency', value_name='Rate')
-
+    plot_df = closes.reset_index().melt(id_vars='Date', var_name='Currency', value_name='Rate')
     # 2. 最新価格を取得し、Y軸の範囲を決定
     # 最新のレートから±0.5円の範囲にズームする
     latest_rate = max(last_usd, last_cad)
