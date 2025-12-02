@@ -2,6 +2,7 @@ import streamlit as st
 import yfinance as yf
 import time
 import pandas as pd
+import plotly.express as px
 
 # ページ設定
 st.set_page_config(page_title="FX Monitor", layout="wide")
@@ -45,10 +46,38 @@ if not df.empty:
     with col2:
         st.metric(label="CAD/JPY", value=f"{last_cad:.2f} 円")
 
+    import plotly.express as px  # <<< この行をファイルの先頭に追加
+
+    # ... (中略) ...
+
     # 4. チャート表示
-    # --- 修正点: チャートのタイトルをデータに合わせて変更 ---
-    st.subheader("直近5日間の推移 (1時間足)")
-    st.line_chart(closes)
+    st.subheader("直近5日間の推移 (1時間足) - 縦幅ズーム済み")
+
+    # 1. Plotly用にデータを整形 (USDJPY=XとCADJPY=Xを一つの列にまとめる)
+    plot_df = closes.reset_index().melt(id_vars='Date', var_name='Currency', value_name='Rate')
+
+    # 2. 最新価格を取得し、Y軸の範囲を決定
+    # 最新のレートから±0.5円の範囲にズームする
+    latest_rate = max(last_usd, last_cad)
+    y_min = max(0, latest_rate - 0.5)
+    y_max = latest_rate + 0.5
+
+    # 3. Plotlyでチャートを作成
+    fig = px.line(
+        plot_df,
+        x='Date',
+        y='Rate',
+        color='Currency',
+        title='USD/JPY と CAD/JPY の比較',
+        labels={'Rate': 'レート (円)', 'Date': '日時'}
+    )
+
+    # 4. Y軸の範囲を固定してズームイン
+    fig.update_yaxes(range=[y_min, y_max])
+    fig.update_layout(hovermode="x unified")  # マウスオーバーで全データを表示
+
+    # 5. Streamlitに表示
+    st.plotly_chart(fig, use_container_width=True)  # <<< st.line_chartからの変更点
 else:
     st.error("データの取得に失敗しました。")
 
