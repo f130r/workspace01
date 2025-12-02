@@ -11,8 +11,14 @@ st.title("USD/JPY & CAD/JPY リアルタイムレート")
 def get_rate_data():
     # 1分足のデータを取得
     tickers = ["USDJPY=X", "CADJPY=X"]
-    data = yf.download(tickers, period="1d", interval="1m", progress=False)
-    return data
+    # 変更点: 期間を5日間に、間隔を1時間に変更し、グラフの動きを保証します。
+    df = yf.download(tickers, period="5d", interval="1h", progress=False)
+
+    # yfinanceがエラーコードを返した場合に備える
+    if df.empty:
+        return pd.DataFrame()
+
+    return df
 
 # 2. データのロードと整形
 df = get_rate_data()
