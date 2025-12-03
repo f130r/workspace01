@@ -37,7 +37,7 @@ def display_card_text(card: Card):
 
 def handle_turn_action():
     """
-    手札から札を出した後の、組み合わせ判定と札の獲得処理を行います。
+    手札から札を出した後、山札から札を引く処理を含む、ターン処理全体を実行します。
     """
     state = st.session_state['game_state']
     selected_card = st.session_state['selected_hand_card']
@@ -45,30 +45,57 @@ def handle_turn_action():
     if selected_card is None:
         return
 
-    # 1. プレイヤーの手札から選択した札を削除
+    # --- 1. 手札から場へ札を出す処理 ---
+
+    # プレイヤーの手札から選択した札を削除
     state['player1_hand'].remove(selected_card)
 
-    # 2. 場札から、同じ月の札があるか探す
+    # 場札から、同じ月の札があるか探す
     matching_field_cards = [card for card in state['field_cards'] if card.month == selected_card.month]
 
-    # 3. 札の獲得処理
+    # 獲得処理（出した札と場札）
     if len(matching_field_cards) >= 1:
-        # マッチした札の中から獲得する札を決定（ここでは最初に見つかった1枚とする）
         gained_card = matching_field_cards[0]
-
-        # 獲得した札を場札から削除
         state['field_cards'].remove(gained_card)
-
-        # 獲得札リストに追加
         state['player1_collected'].append(selected_card)
         state['player1_collected'].append(gained_card)
-
-        st.success(f"🎊 {selected_card.name} が {gained_card.name} と組み合わさり、2枚を獲得しました！")
-
+        st.success(f"🎊 **{selected_card.name}** が **{gained_card.name}** と組み合わさり、2枚を獲得しました！")
     else:
         # マッチする札がない場合、手札の札は場に残る
         state['field_cards'].append(selected_card)
-        st.warning(f"❌ {selected_card.name} は場に残りました。")
+        st.warning(f"❌ **{selected_card.name}** は場に残りました。")
+
+    # --- 2. 山札から札を引く処理（ターン進行の核心） ---
+
+    if state['yama_fuda']:
+        # 山札のトップから1枚引く
+        drawn_card = state['yama_fuda'].pop(0)
+        st.info(f"🃏 山札から **{drawn_card.name}** が引かれました。")
+
+        # 場札から、引いた札と同じ月の札があるか探す
+        matching_field_cards_yama = [card for card in state['field_cards'] if card.month == drawn_card.month]
+
+        # 獲得処理（引いた札と場札）
+        if len(matching_field_cards_yama) >= 1:
+            gained_card_yama = matching_field_cards_yama[0]
+            state['field_cards'].remove(gained_card_yama)
+
+            # 獲得札リストに追加
+            state['player1_collected'].append(drawn_card)
+            state['player1_collected'].append(gained_card_yama)
+
+            st.success(f"🎉 山札の **{drawn_card.name}** が **{gained_card_yama.name}** と組み合わさり、さらに2枚を獲得！")
+
+        else:
+            # マッチする札がない場合、引いた札は場に残る
+            state['field_cards'].append(drawn_card)
+            st.warning(f"⚠️ 山札の札 **{drawn_card.name}** は場に残りました。")
+
+    # 3. 後処理
+    st.session_state['selected_hand_card'] = None
+    # 相手ターンへ移行（今回は相手AIの実装が未定のため、一旦プレイヤー1ターンに戻す）
+    state['current_turn'] = 1
+    # st.rerun() は main() の中でボタンを押した後に実行されるため、ここでは不要
 
     # 4. 山札からの自動プレイ（今回は簡易的にスキップ）
     # この後、山札から1枚引いて場に出し、組み合わせ判定をするロジックが本来は必要です。
