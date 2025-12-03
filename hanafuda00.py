@@ -110,7 +110,7 @@ def main():
                 if st.button("出す", key=f"hand_{card.id}"):
                     # 選択した札をセッションに一時保存し、画面更新（リラン）をトリガーする
                     st.session_state['selected_hand_card'] = card
-                    st.experimental_rerun()  # これにより main() が再実行され、handle_turn_action() が動く
+                    st.rerun()  # これにより main() が再実行され、handle_turn_action() が動く
     else:
         st.info("相手（AI）のターンです。次回の実装でAIのロジックを追加します。")
         # AIターン処理を実装するまで、ここで処理を停止
