@@ -1,21 +1,19 @@
 import streamlit as st
-from hanafuda_logic import ALL_CARDS, HanafudaRule, initialize_game, Card  # 前回定義したロジックをインポート
+import random
+# ファイル名の変更に合わせて、インポート元を修正
+from hanafuda_logic00 import ALL_CARDS, HanafudaRule, initialize_game, Card
 
 
 def init_session_state():
-    """
-    Streamlitのセッション状態を初期化します。
-    """
+    """Streamlitのセッション状態を初期化します。"""
     if 'game_state' not in st.session_state:
         st.session_state['game_state'] = initialize_game()
-        st.session_state['selected_card'] = None  # プレイヤーが選択した手札
+        st.session_state['selected_hand_card'] = None  # プレイヤーが選択した手札
 
 
 def display_card_text(card: Card):
-    """
-    札の種別に応じて色分けしたテキストで表示します。
-    """
-    # 札の種別（光、タネ、タン、カス）に応じて色を決定
+    """札の種別に応じて色分けしたテキストで表示します。（画像不使用のため）"""
+    # 札の種別に応じて色と記号を決定
     if card.type == "光":
         color = "red"
         symbol = "⭐"
@@ -37,46 +35,121 @@ def display_card_text(card: Card):
     )
 
 
+def handle_turn_action():
+    """
+    手札から札を出した後の、組み合わせ判定と札の獲得処理を行います。
+    """
+    state = st.session_state['game_state']
+    selected_card = st.session_state['selected_hand_card']
+
+    if selected_card is None:
+        return
+
+    # 1. プレイヤーの手札から選択した札を削除
+    state['player1_hand'].remove(selected_card)
+
+    # 2. 場札から、同じ月の札があるか探す
+    matching_field_cards = [card for card in state['field_cards'] if card.month == selected_card.month]
+
+    # 3. 札の獲得処理
+    if len(matching_field_cards) >= 1:
+        # マッチした札の中から獲得する札を決定（ここでは最初に見つかった1枚とする）
+        gained_card = matching_field_cards[0]
+
+        # 獲得した札を場札から削除
+        state['field_cards'].remove(gained_card)
+
+        # 獲得札リストに追加
+        state['player1_collected'].append(selected_card)
+        state['player1_collected'].append(gained_card)
+
+        st.success(f"🎊 {selected_card.name} が {gained_card.name} と組み合わさり、2枚を獲得しました！")
+
+    else:
+        # マッチする札がない場合、手札の札は場に残る
+        state['field_cards'].append(selected_card)
+        st.warning(f"❌ {selected_card.name} は場に残りました。")
+
+    # 4. 山札からの自動プレイ（今回は簡易的にスキップ）
+    # この後、山札から1枚引いて場に出し、組み合わせ判定をするロジックが本来は必要です。
+    # ターンが終了したことを示す
+    st.session_state['selected_hand_card'] = None
+    state['current_turn'] = 2  # 相手ターンへ
+
+
+# -------------------- MAIN --------------------
+
 def main():
     st.set_page_config(layout="wide")
     st.title("簡易版 Streamlit 花札 🌸")
 
-    # 状態の初期化
     init_session_state()
     state = st.session_state['game_state']
 
+    # 手札が選択されていたら、獲得処理を実行（ボタンを押した後に実行される）
+    handle_turn_action()
+
     # --- 1. 場の札の表示 ---
     st.header("場の札 (Field)")
-    cols = st.columns(8)  # 場札は8枚なので8列で表示
+    cols = st.columns(8)
     for i, card in enumerate(state['field_cards']):
         with cols[i]:
             display_card_text(card)
-            # 札を選択した時の処理は後で実装します
-            # st.button("選択", key=f"field_{card.id}")
 
     # --- 2. プレイヤーの手札の表示 ---
     st.header("あなたの手札 (Your Hand)")
-    hand_cols = st.columns(8)  # 手札も8枚なので8列
-    for i, card in enumerate(state['player1_hand']):
-        with hand_cols[i]:
-            display_card_text(card)
 
-            # プレイヤーがこの札を選択するボタン
-            if st.button("出す", key=f"hand_{card.id}"):
-                st.session_state['selected_card'] = card
-                st.info(f"'{card.name}' を選択しました。")
-                # 次のターン処理（場札との組み合わせ判定）は後で実装します
+    # ターンチェック（今回はプレイヤー1の操作のみ可能）
+    if state['current_turn'] == 1:
+        hand_cols = st.columns(8)
+        for i, card in enumerate(state['player1_hand']):
+            with hand_cols[i]:
+                display_card_text(card)
+
+                # プレイヤーがこの札を選択するボタン
+                if st.button("出す", key=f"hand_{card.id}"):
+                    # 選択した札をセッションに一時保存し、画面更新（リラン）をトリガーする
+                    st.session_state['selected_hand_card'] = card
+                    st.experimental_rerun()  # これにより main() が再実行され、handle_turn_action() が動く
+    else:
+        st.info("相手（AI）のターンです。次回の実装でAIのロジックを追加します。")
+        # AIターン処理を実装するまで、ここで処理を停止
 
     # --- 3. 獲得札の表示 ---
     st.header("獲得札 (Collected)")
-    # 獲得札はシンプルにリスト表示
-    st.write(f"あなた: {len(state['player1_collected'])}枚")
-    st.write(f"相手: {len(state['player2_collected'])}枚")
+    col1, col2 = st.columns(2)
+    with col1:
+        st.subheader("あなた")
+        score, yaku = HanafudaRule.calculate_score(state['player1_collected'])
+        st.write(f"枚数: **{len(state['player1_collected'])}枚**")
+        st.write(f"点数: **{score}点**")
+        # st.write(f"役: {', '.join(yaku)}") # 役の表示は未実装
+    with col2:
+        st.subheader("相手 (AI)")
+        st.write(f"枚数: **{len(state['player2_collected'])}枚**")
 
-    # --- 4. デバッグ情報 ---
-    # st.subheader("デバッグ情報")
-    # st.write(st.session_state['game_state'])
+    # --- 4. ゲームオーバー判定 ---
+    if len(state['player1_hand']) == 0 and len(state['player2_hand']) == 0:
+        st.header("ゲーム終了！")
+        state['game_over'] = True
 
 
 if __name__ == "__main__":
     main()
+```eof
+
+### 🚀 次のステップ
+
+これで、以下の機能が実装されました。
+
+1.  ✅ ** ファイル依存性の解消: ** `hanafuda_logic00.py`
+からのインポート修正。
+2.  ✅ ** 基本アクション: ** 手札の札を場に出すボタン。
+3.  ✅ ** 獲得ロジック: ** 同じ月の札が場にあれば、 ** 2
+枚を獲得 ** し、獲得札リストに追加。
+
+このロジックにはまだ、 ** 山札から札を引く処理 ** や ** 相手（AI）のターン処理 ** が欠けています。
+
+次に、この簡易ロジックを補完するため、 ** 山札から札を引く処理 ** を
+`handle_turn_action`
+に追加しましょう。よろしいでしょうか？
