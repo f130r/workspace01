@@ -38,6 +38,7 @@ def display_card_text(card: Card):
 def handle_turn_action():
     """
     手札から札を出した後、山札から札を引く処理を含む、ターン処理全体を実行します。
+    この関数はプレイヤー1のターンを処理します。
     """
     state = st.session_state['game_state']
     selected_card = st.session_state['selected_hand_card']
@@ -91,17 +92,9 @@ def handle_turn_action():
             state['field_cards'].append(drawn_card)
             st.warning(f"⚠️ 山札の札 **{drawn_card.name}** は場に残りました。")
 
-    # 3. 後処理
+    # 3. 後処理: ターンを相手（AI）に渡すことを明確にする
     st.session_state['selected_hand_card'] = None
-    # 相手ターンへ移行（今回は相手AIの実装が未定のため、一旦プレイヤー1ターンに戻す）
-    state['current_turn'] = 1
-    # st.rerun() は main() の中でボタンを押した後に実行されるため、ここでは不要
-
-    # 4. 山札からの自動プレイ（今回は簡易的にスキップ）
-    # この後、山札から1枚引いて場に出し、組み合わせ判定をするロジックが本来は必要です。
-    # ターンが終了したことを示す
-    st.session_state['selected_hand_card'] = None
-    state['current_turn'] = 2  # 相手ターンへ
+    state['current_turn'] = 2  # 相手ターンへ確実に移行
 
 
 # -------------------- MAIN --------------------
@@ -131,9 +124,10 @@ def main():
     # --- 2. プレイヤーの手札の表示 ---
     st.header("あなたの手札 (Your Hand)")
 
-    # ターンチェック（今回はプレイヤー1の操作のみ可能）
+    # ターンチェック
     if state['current_turn'] == 1:
-        hand_cols = st.columns(8)
+        # プレイヤーのターン: 操作可能
+        hand_cols = st.columns(len(state['player1_hand']) if len(state['player1_hand']) > 0 else 1) # 動的に列数を調整
         for i, card in enumerate(state['player1_hand']):
             with hand_cols[i]:
                 display_card_text(card)
@@ -144,8 +138,11 @@ def main():
                     st.session_state['selected_hand_card'] = card
                     st.rerun()  # これにより main() が再実行され、handle_turn_action() が動く
     else:
-        st.info("相手（AI）のターンです。次回の実装でAIのロジックを追加します。")
-        # AIターン処理を実装するまで、ここで処理を停止
+        # 相手（AI）のターン: 自動処理を実行し、すぐにプレイヤーのターンに戻る
+        st.info("🤖 相手（AI）のターンです... 次の操作に進みます。")
+        # AI処理が未実装のため、すぐにプレイヤーのターンに戻し、画面を再描画して操作可能にする
+        state['current_turn'] = 1
+        st.rerun() # これでゲームが強制的に進行する
 
     # --- 3. 獲得札の表示 ---
     st.header("獲得札 (Collected)")
@@ -155,9 +152,9 @@ def main():
         score, yaku = HanafudaRule.calculate_score(state['player1_collected'])
         st.write(f"枚数: **{len(state['player1_collected'])}枚**")
         st.write(f"点数: **{score}点**")
-        # st.write(f"役: {', '.join(yaku)}") # 役の表示は未実装
     with col2:
         st.subheader("相手 (AI)")
+        score, yaku = HanafudaRule.calculate_score(state['player2_collected']) # AI側の点数計算も準備
         st.write(f"枚数: **{len(state['player2_collected'])}枚**")
 
     # --- 4. ゲームオーバー判定 ---
@@ -168,5 +165,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
