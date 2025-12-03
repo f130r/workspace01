@@ -1,167 +1,114 @@
-import streamlit as st
 import random
-# ファイル名の変更に合わせて、インポート元を修正
-from hanafuda_logic00 import ALL_CARDS, HanafudaRule, initialize_game, Card
+from typing import List, Dict, Tuple
+
+# --- 1. 札の基本定義 ---
+BRIGHT = "光"
+ANIMAL = "タネ"
+RIBBON = "タン"
+JUNK = "カス"
 
 
-def init_session_state():
-    """Streamlitのセッション状態を初期化します。"""
-    if 'game_state' not in st.session_state:
-        st.session_state['game_state'] = initialize_game()
-        st.session_state['selected_hand_card'] = None  # プレイヤーが選択した手札
+# ... (Card クラスと ALL_CARDS 定義は変更なし) ...
+
+class Card:
+    """花札の一枚を表現するクラス。"""
+
+    def __init__(self, month: int, type: str, name: str, points: int):
+        self.month = month
+        self.type = type
+        self.name = name
+        self.points = points
+        self.id = f"{month:02d}_{name}"
+
+    def __repr__(self):
+        return f"({self.month}月:{self.type}:{self.name})"
+
+    def __eq__(self, other):
+        if isinstance(other, Card):
+            return self.id == other.id
+        return False
+
+    def __hash__(self):
+        return hash(self.id)
 
 
-def display_card_text(card: Card):
-    """札の種別に応じて色分けしたテキストで表示します。（画像不使用のため）"""
-    # 札の種別に応じて色と記号を決定
-    if card.type == "光":
-        color = "red"
-        symbol = "⭐"
-    elif card.type == "タネ":
-        color = "green"
-        symbol = "◎"
-    elif card.type == "タン":
-        color = "blue"
-        symbol = "🎗️"
-    else:  # カス
-        color = "gray"
-        symbol = "⚫"
-
-    st.markdown(
-        f"<div style='border: 1px solid {color}; padding: 5px; margin: 2px; text-align: center; border-radius: 5px; background-color: #f0f0f0;'>"
-        f"**{symbol} {card.name}**<br><span style='font-size: 0.8em;'>({card.month}月/{card.type})</span>"
-        f"</div>",
-        unsafe_allow_html=True
-    )
-
-
-def handle_turn_action():
-    """
-    手札から札を出した後、山札から札を引く処理を含む、ターン処理全体を実行します。
-    この関数はプレイヤー1のターンを処理します。
-    """
-    state = st.session_state['game_state']
-    selected_card = st.session_state['selected_hand_card']
-
-    if selected_card is None:
-        return
-
-    # --- 1. 手札から場へ札を出す処理 ---
-
-    # プレイヤーの手札から選択した札を削除
-    state['player1_hand'].remove(selected_card)
-
-    # 場札から、同じ月の札があるか探す
-    matching_field_cards = [card for card in state['field_cards'] if card.month == selected_card.month]
-
-    # 獲得処理（出した札と場札）
-    if len(matching_field_cards) >= 1:
-        gained_card = matching_field_cards[0]
-        state['field_cards'].remove(gained_card)
-        state['player1_collected'].append(selected_card)
-        state['player1_collected'].append(gained_card)
-        st.success(f"🎊 **{selected_card.name}** が **{gained_card.name}** と組み合わさり、2枚を獲得しました！")
-    else:
-        # マッチする札がない場合、手札の札は場に残る
-        state['field_cards'].append(selected_card)
-        st.warning(f"❌ **{selected_card.name}** は場に残りました。")
-
-    # --- 2. 山札から札を引く処理（ターン進行の核心） ---
-
-    if state['yama_fuda']:
-        # 山札のトップから1枚引く
-        drawn_card = state['yama_fuda'].pop(0)
-        st.info(f"🃏 山札から **{drawn_card.name}** が引かれました。")
-
-        # 場札から、引いた札と同じ月の札があるか探す
-        matching_field_cards_yama = [card for card in state['field_cards'] if card.month == drawn_card.month]
-
-        # 獲得処理（引いた札と場札）
-        if len(matching_field_cards_yama) >= 1:
-            gained_card_yama = matching_field_cards_yama[0]
-            state['field_cards'].remove(gained_card_yama)
-
-            # 獲得札リストに追加
-            state['player1_collected'].append(drawn_card)
-            state['player1_collected'].append(gained_card_yama)
-
-            st.success(f"🎉 山札の **{drawn_card.name}** が **{gained_card_yama.name}** と組み合わさり、さらに2枚を獲得！")
-
-        else:
-            # マッチする札がない場合、引いた札は場に残る
-            state['field_cards'].append(drawn_card)
-            st.warning(f"⚠️ 山札の札 **{drawn_card.name}** は場に残りました。")
-
-    # 3. 後処理: ターンを相手（AI）に渡すことを明確にする
-    st.session_state['selected_hand_card'] = None
-    state['current_turn'] = 2  # 相手ターンへ確実に移行
+ALL_CARDS: List[Card] = [
+    # 1月：松
+    Card(1, BRIGHT, "松に鶴", 20), Card(1, RIBBON, "松に赤短", 5), Card(1, JUNK, "松カスA", 1),
+    Card(1, JUNK, "松カスB", 1),
+    # 2月：梅
+    Card(2, ANIMAL, "梅に鶯", 10), Card(2, RIBBON, "梅に赤短", 5), Card(2, JUNK, "梅カスA", 1),
+    Card(2, JUNK, "梅カスB", 1),
+    # 3月：桜
+    Card(3, BRIGHT, "桜に幕", 20), Card(3, RIBBON, "桜に赤短", 5), Card(3, JUNK, "桜カスA", 1),
+    Card(3, JUNK, "桜カスB", 1),
+    # 4月：藤
+    Card(4, ANIMAL, "藤に不如帰", 10), Card(4, RIBBON, "藤にムラサキ短", 5), Card(4, JUNK, "藤カスA", 1),
+    Card(4, JUNK, "藤カスB", 1),
+    # 5月：菖蒲
+    Card(5, ANIMAL, "菖蒲に八ツ橋", 10), Card(5, RIBBON, "菖蒲にムラサキ短", 5), Card(5, JUNK, "菖蒲カスA", 1),
+    Card(5, JUNK, "菖蒲カスB", 1),
+    # 6月：牡丹
+    Card(6, ANIMAL, "牡丹に蝶", 10), Card(6, RIBBON, "牡丹にムラサキ短", 5), Card(6, JUNK, "牡丹カスA", 1),
+    Card(6, JUNK, "牡丹カスB", 1),
+    # 7月：萩
+    Card(7, ANIMAL, "萩に猪", 10), Card(7, RIBBON, "萩にムラサキ短", 5), Card(7, JUNK, "萩カスA", 1),
+    Card(7, JUNK, "萩カスB", 1),
+    # 8月：芒
+    Card(8, BRIGHT, "芒に月", 20), Card(8, ANIMAL, "芒に雁", 10), Card(8, JUNK, "芒カスA", 1),
+    Card(8, JUNK, "芒カスB", 1),
+    # 9月：菊
+    Card(9, ANIMAL, "菊に盃", 10), Card(9, RIBBON, "菊にムラサキ短", 5), Card(9, JUNK, "菊カスA", 1),
+    Card(9, JUNK, "菊カスB", 1),
+    # 10月：紅葉
+    Card(10, ANIMAL, "紅葉に鹿", 10), Card(10, RIBBON, "紅葉に青短", 5), Card(10, JUNK, "紅葉カスA", 1),
+    Card(10, JUNK, "紅葉カスB", 1),
+    # 11月：柳
+    Card(11, BRIGHT, "柳に小野道風", 20), Card(11, RIBBON, "柳に青短", 5), Card(11, JUNK, "柳カス", 1),
+    Card(11, JUNK, "ツル", 1),
+    # 12月：桐
+    Card(12, BRIGHT, "桐に鳳凰", 20), Card(12, JUNK, "桐カスA", 1), Card(12, JUNK, "桐カスB", 1),
+    Card(12, JUNK, "桐カスC", 1),
+]
 
 
-# -------------------- MAIN --------------------
+# --- 2. 役の定義と判定ロジック (更新) ---
+class HanafudaRule:
 
-def main():
-    st.set_page_config(layout="wide")
-    st.title("簡易版 Streamlit 花札 🌸")
+    @staticmethod
+    def get_player_card_ids(cards: List[Card]) -> List[str]:
+        return [c.id for c in cards]
 
-    init_session_state()
-    state = st.session_state['game_state']
+    @staticmethod
+    def calculate_score(collected_cards: List[Card]) -> Tuple[int, List[str]]:
+        """獲得札の点数（役を含まない簡易版）を計算する"""
+        total_points = sum(card.points for card in collected_cards)
 
-    # 手札が選択されていたら、獲得処理を実行（ボタンを押した後に実行される）
-    handle_turn_action()
+        # 将来的に役の判定ロジックが入る
+        detected_yaku = ["役なし (簡易計算)"]
 
-    # --- 1. 場の札の表示 ---
-    st.header("場の札 (Field)")
-    # 場札の数に合わせて列を生成する
-    num_field_cards = len(state['field_cards'])
-    cols = st.columns(num_field_cards if num_field_cards > 0 else 1)
-    # num_field_cardsが0の場合に備えて最低1列は確保
-    if num_field_cards > 0:
-        for i, card in enumerate(state['field_cards']):
-            # iがcolsの範囲内であることが保証される
-            with cols[i]:
-                display_card_text(card)
-
-    # --- 2. プレイヤーの手札の表示 ---
-    st.header("あなたの手札 (Your Hand)")
-
-    # ターンチェック
-    if state['current_turn'] == 1:
-        # プレイヤーのターン: 操作可能
-        hand_cols = st.columns(len(state['player1_hand']) if len(state['player1_hand']) > 0 else 1) # 動的に列数を調整
-        for i, card in enumerate(state['player1_hand']):
-            with hand_cols[i]:
-                display_card_text(card)
-
-                # プレイヤーがこの札を選択するボタン
-                if st.button("出す", key=f"hand_{card.id}"):
-                    # 選択した札をセッションに一時保存し、画面更新（リラン）をトリガーする
-                    st.session_state['selected_hand_card'] = card
-                    st.rerun()  # これにより main() が再実行され、handle_turn_action() が動く
-    else:
-        # 相手（AI）のターン: 自動処理を実行し、すぐにプレイヤーのターンに戻る
-        st.info("🤖 相手（AI）のターンです... 次の操作に進みます。")
-        # AI処理が未実装のため、すぐにプレイヤーのターンに戻し、画面を再描画して操作可能にする
-        state['current_turn'] = 1
-        st.rerun() # これでゲームが強制的に進行する
-
-    # --- 3. 獲得札の表示 ---
-    st.header("獲得札 (Collected)")
-    col1, col2 = st.columns(2)
-    with col1:
-        st.subheader("あなた")
-        score, yaku = HanafudaRule.calculate_score(state['player1_collected'])
-        st.write(f"枚数: **{len(state['player1_collected'])}枚**")
-        st.write(f"点数: **{score}点**")
-    with col2:
-        st.subheader("相手 (AI)")
-        score, yaku = HanafudaRule.calculate_score(state['player2_collected']) # AI側の点数計算も準備
-        st.write(f"枚数: **{len(state['player2_collected'])}枚**")
-
-    # --- 4. ゲームオーバー判定 ---
-    if len(state['player1_hand']) == 0 and len(state['player2_hand']) == 0:
-        st.header("ゲーム終了！")
-        state['game_over'] = True
+        return (total_points, detected_yaku)
 
 
-if __name__ == "__main__":
-    main()
+# ... (initialize_game 関数は変更なし) ...
+
+def initialize_game():
+    """ゲーム開始時に札をシャッフルし、手札と場札を配る。"""
+    deck = ALL_CARDS[:]
+    random.shuffle(deck)
+
+    player1_hand = deck[:8]
+    player2_hand = deck[8:16]
+    field_cards = deck[16:24]
+    yama_fuda = deck[24:]
+
+    return {
+        "player1_hand": player1_hand,
+        "player2_hand": player2_hand,
+        "field_cards": field_cards,
+        "yama_fuda": yama_fuda,
+        "player1_collected": [],
+        "player2_collected": [],
+        "current_turn": 1,
+        "game_over": False
+    }
