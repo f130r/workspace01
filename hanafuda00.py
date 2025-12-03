@@ -21,16 +21,13 @@ def display_card_text(card: Card, key_prefix: str):
     }
     color, symbol = color_map.get(card.type, ("black", "❓"))
 
-    # ユニークキーを生成
-    display_key = f"{key_prefix}_{card.id}"
-
-    # 枠付きのMarkdownで表示
+    # st.markdown は表示のみに使用し、キーは使用しない
     st.markdown(
         f"<div style='border: 1px solid {color}; padding: 5px; margin: 2px; text-align: center; border-radius: 5px; background-color: #f0f0f0;'>"
         f"**{symbol} {card.name}**<br><span style='font-size: 0.8em;'>({card.month}月/{card.type})</span>"
         f"</div>",
         unsafe_allow_html=True,
-        key=display_key
+        # key=display_key # 👈 この行を削除/コメントアウトします
     )
 
 
