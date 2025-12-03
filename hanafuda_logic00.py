@@ -105,19 +105,3 @@ def initialize_game():
         "current_turn": 1,
         "game_over": False
     }
-
-
-```eof
-
----
-
-## 2. 🚨 メインファイル (`hanafuda00.py`) の修正
-
-ファイル名が変わったため、メインファイル
-`hanafuda00.py`
-の ** インポート文 ** も修正する必要があります。
-
-** 修正前 **
-
-```python
-from hanafuda_logic import ALL_CARDS, HanafudaRule, initialize_game, Card
