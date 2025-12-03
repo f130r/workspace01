@@ -91,10 +91,15 @@ def main():
 
     # --- 1. 場の札の表示 ---
     st.header("場の札 (Field)")
-    cols = st.columns(8)
-    for i, card in enumerate(state['field_cards']):
-        with cols[i]:
-            display_card_text(card)
+    # 場札の数に合わせて列を生成する
+    num_field_cards = len(state['field_cards'])
+    cols = st.columns(num_field_cards if num_field_cards > 0 else 1)
+    # num_field_cardsが0の場合に備えて最低1列は確保
+    if num_field_cards > 0:
+        for i, card in enumerate(state['field_cards']):
+            # iがcolsの範囲内であることが保証される
+            with cols[i]:
+                display_card_text(card)
 
     # --- 2. プレイヤーの手札の表示 ---
     st.header("あなたの手札 (Your Hand)")
