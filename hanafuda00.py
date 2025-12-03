@@ -41,7 +41,7 @@ def handle_turn_action():
         temp_played_card = None
     else:
         # マッチする札がない場合、手札の札は場に残る（temp_played_cardのまま）
-        st.warning(f"❌ **{temp_played_card.name}** は場に残る候補です。")
+        st.info(f"👉 手札の札 **{temp_played_card.name}** は場札とマッチしませんでした。") # warningからinfoに変更し、少し控えめに
 
     # --- 3. 山札から札を引く処理（ターン進行の核心） ---
 
@@ -73,25 +73,23 @@ def handle_turn_action():
             temp_drawn_card = None
         else:
             # マッチする札がない場合、引いた札は場に残る（temp_drawn_cardのまま）
-            st.warning(f"⚠️ 山札の札 **{temp_drawn_card.name}** は場に残る候補です。")
+            st.info(f"👉 山札の札 **{temp_drawn_card.name}** は場札とマッチしませんでした。") # warningからinfoに変更し、少し控えめに
 
         # 場の更新処理（ここで初めて場に追加する）
         # 手札から出した札（獲得されなかった場合）を場に追加
         if temp_played_card:
             state['field_cards'].append(temp_played_card)
-            st.warning(
-                f"❌ 手札から出した札 **{temp_played_card.name}** が場に残りました。")  # 2重でメッセージが出るため、このメッセージは不要な場合もある
+            # st.warningは表示済みなので削除
 
         # 山札から引いた札（獲得されなかった場合）を場に追加
         if temp_drawn_card:
             state['field_cards'].append(temp_drawn_card)
-            st.warning(f"⚠️ 山札の札 **{temp_drawn_card.name}** が場に残りました。")  # 2重でメッセージが出るため、このメッセージは不要な場合もある
+            # st.warningは表示済みなので削除
 
     # 4. 後処理: ターンを相手（AI）に渡すことを明確にする
     st.session_state['selected_hand_card'] = None
     state['current_turn'] = 2
 
-    # 5. 再描画のトリガー
-    # st.rerun() は main() 関数内で押されたボタンによって呼ばれるため、ここでは不要だが、
-    # 処理が長くなる場合はユーザーに次のアクションを促すメッセージを入れると良い。
+    # 5. 再描画のトリガー（コメントアウトを削除し、ロジックをシンプルに）
+    # st.rerun() は main() 関数内で押されたボタンによって呼ばれるため、ここでは不要
     # 例：st.button("AIのターンへ進む", on_click=lambda: state.update({'current_turn': 2}))
