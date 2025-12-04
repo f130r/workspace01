@@ -4,15 +4,13 @@ import pandas as pd
 
 # APIのエンドポイント (URL)
 OPENBD_API_URL = "https://api.openbd.jp/v1/get"
-# AmazonリンクのベースURL (ASIN/ISBNで検索)
-AMAZON_BASE_URL = "https://www.amazon.co.jp/dp/"
+# Amazon検索リンクのベースURLに変更
+AMAZON_SEARCH_URL = "https://www.amazon.co.jp/s?k="
 
 st.title("📚 Streamlit 簡易書籍検索 (JANコード/ISBN利用)")
 st.caption("OpenBD API を利用して、実際に出版されている書籍情報を検索します。")
 
 # --- 1. ユーザー入力の改善 ---
-
-# max_charsを17に拡張し、ハイフンを含んだ文字列のペーストに対応
 raw_input = st.text_input(
     "検索したいJANコード (ISBN 13桁) を入力してください（ハイフン可）",
     max_chars=17,
@@ -23,7 +21,6 @@ raw_input = st.text_input(
 jan_input = raw_input.replace('-', '')
 
 # --- 2. 検索実行 ---
-
 if st.button("書籍情報を検索"):
     # 検索前にJANコードの形式をチェック
     if not jan_input.isdigit() or len(jan_input) != 13:
@@ -40,16 +37,16 @@ if st.button("書籍情報を検索"):
                 if data and data[0] is not None:
                     book_info = data[0]
 
-                    # 3. Amazonリンクを生成し、表示
-                    amazon_link = f"{AMAZON_BASE_URL}{jan_input}"
+                    # 3. Amazon検索リンクを生成（最も確実）
+                    amazon_search_link = f"{AMAZON_SEARCH_URL}{jan_input}"
 
                     st.success(f"✅ 検索成功！ (ISBN: {jan_input})")
 
                     # クリック可能なリンクとして表示
-                    st.markdown(f"### 🛍️ [Amazonでこの商品を見る]({amazon_link})")
+                    st.markdown(f"### 🛍️ [Amazonでこの商品を見る]({amazon_search_link})")
                     st.markdown("---")
 
-                    # 必要な情報を抽出
+                    # 必要な情報を抽出 (省略)
                     summary = {
                         "タイトル": book_info.get("summary", {}).get("title", "N/A"),
                         "著者": book_info.get("summary", {}).get("author", "N/A"),
@@ -72,4 +69,4 @@ if st.button("書籍情報を検索"):
 
 # デモ用ISBN (検索に使えるコード)
 st.sidebar.subheader("デモ用コード (ISBN)")
-st.sidebar.code("9784087809282")  # 例：呪術廻戦 20
+st.sidebar.code("9784087809282")
