@@ -1,135 +1,104 @@
-// Minimal Othello (pure JS) — legal-move check, flips, pass, endgame, score
-(function(){
-  const BOARD_SIZE = 8;
-  const dirs = [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
+// この JS ファイル名は任意です（reversi.js でなくても動きます）
 
-  let board = [];
-  let turn = "black"; // "black" or "white"
-  const boardDiv = document.getElementById("board");
-  const turnEl = document.getElementById("turn");
-  const scoreEl = document.getElementById("score");
-  const restartBtn = document.getElementById("restart");
+const BOARD_SIZE = 8;
+let board = [];
+let currentTurn = "black";
 
-  function init(){
-    board = Array.from({length: BOARD_SIZE}, ()=>Array(BOARD_SIZE).fill(null));
-    board[3][3] = "white";
-    board[3][4] = "black";
-    board[4][3] = "black";
-    board[4][4] = "white";
-    turn = "black";
-    render();
-  }
+const boardDiv = document.getElementById("board");
+const turnSpan = document.getElementById("turn");
 
-  function inBoard(r,c){ return r>=0 && r<BOARD_SIZE && c>=0 && c<BOARD_SIZE; }
+// 初期化
+function initBoard() {
+  board = Array.from({ length: BOARD_SIZE }, () => Array(BOARD_SIZE).fill(null));
 
-  // return array of [r,c] that would be flipped for move (r,c) by color
-  function getFlips(r,c,color){
-    if (!inBoard(r,c) || board[r][c] !== null) return [];
-    const opponent = color === "black" ? "white" : "black";
-    const flips = [];
-    for (const [dr,dc] of dirs){
-      let rr = r + dr, cc = c + dc;
-      const line = [];
-      while (inBoard(rr,cc) && board[rr][cc] === opponent){
-        line.push([rr,cc]);
-        rr += dr; cc += dc;
+  board[3][3] = "white";
+  board[3][4] = "black";
+  board[4][3] = "black";
+  board[4][4] = "white";
+
+  renderBoard();
+}
+
+// 描画
+function renderBoard() {
+  boardDiv.innerHTML = "";
+  for (let r = 0; r < BOARD_SIZE; r++) {
+    for (let c = 0; c < BOARD_SIZE; c++) {
+      const cell = document.createElement("div");
+      cell.className = "cell";
+      cell.dataset.row = r;
+      cell.dataset.col = c;
+
+      const disc = board[r][c];
+      if (disc) {
+        const d = document.createElement("div");
+        d.classList.add("disc", disc);
+        cell.appendChild(d);
       }
-      if (line.length > 0 && inBoard(rr,cc) && board[rr][cc] === color){
-        flips.push(...line);
-      }
-    }
-    return flips;
-  }
 
-  function anyValid(color){
-    for (let r=0;r<BOARD_SIZE;r++){
-      for (let c=0;c<BOARD_SIZE;c++){
-        if (getFlips(r,c,color).length>0) return true;
-      }
-    }
-    return false;
-  }
-
-  function applyMove(r,c,color){
-    const flips = getFlips(r,c,color);
-    if (flips.length === 0) return false;
-    board[r][c] = color;
-    for (const [rr,cc] of flips) board[rr][cc] = color;
-    return true;
-  }
-
-  function countScores(){
-    let b=0,w=0;
-    for (let r=0;r<BOARD_SIZE;r++){
-      for (let c=0;c<BOARD_SIZE;c++){
-        if (board[r][c] === "black") b++;
-        if (board[r][c] === "white") w++;
-      }
-    }
-    return {black:b, white:w};
-  }
-
-  function render(){
-    // board
-    boardDiv.innerHTML = "";
-    for (let r=0;r<BOARD_SIZE;r++){
-      for (let c=0;c<BOARD_SIZE;c++){
-        const cell = document.createElement("div");
-        cell.className = "cell";
-        cell.dataset.r = r; cell.dataset.c = c;
-        // valid move highlight
-        if (getFlips(r,c,turn).length > 0) cell.classList.add("valid");
-        // stone
-        if (board[r][c]){
-          const s = document.createElement("div");
-          s.className = "stone " + board[r][c];
-          cell.appendChild(s);
-        }
-        cell.addEventListener("click", onCellClick);
-        boardDiv.appendChild(cell);
-      }
-    }
-    // turn and score
-    turnEl.textContent = turn === "black" ? "黒" : "白";
-    const sc = countScores();
-    scoreEl.textContent = `黒:${sc.black} 白:${sc.white}`;
-
-    // endgame check
-    if (!anyValid("black") && !anyValid("white")){
-      const winner = sc.black === sc.white ? "引き分け" : (sc.black > sc.white ? "黒の勝ち" : "白の勝ち");
-      setTimeout(()=>{ alert("ゲーム終了 — " + winner + `（黒:${sc.black} 白:${sc.white}）`); }, 50);
+      cell.addEventListener("click", onCellClick);
+      boardDiv.appendChild(cell);
     }
   }
 
-  function onCellClick(e){
-    const r = parseInt(e.currentTarget.dataset.r);
-    const c = parseInt(e.currentTarget.dataset.c);
+  turnSpan.textContent = currentTurn === "black" ? "黒" : "白";
+}
 
-    if (applyMove(r,c,turn)){
-      // move applied
-      // next turn: if opponent has no moves, stay with current player (pass)
-      const opponent = turn === "black" ? "white" : "black";
-      if (anyValid(opponent)){
-        turn = opponent;
-      } else if (anyValid(turn)){
-        // opponent has no moves, current keeps turn (pass)
-        // turn remains same
-        // optionally inform
-        // (no alert to avoid noise)
+// クリック時処理
+function onCellClick(e) {
+  const row = Number(e.currentTarget.dataset.row);
+  const col = Number(e.currentTarget.dataset.col);
+
+  const flips = getFlippableStones(row, col, currentTurn);
+  if (flips.length === 0) return; // 置けない場所
+
+  // 置く
+  board[row][col] = currentTurn;
+
+  // ひっくり返す
+  for (const [r, c] of flips) {
+    board[r][c] = currentTurn;
+  }
+
+  // ターン交代
+  currentTurn = currentTurn === "black" ? "white" : "black";
+
+  renderBoard();
+}
+
+// ひっくり返せる石を取得
+function getFlippableStones(row, col, color) {
+  if (board[row][col] !== null) return [];
+
+  const opponent = color === "black" ? "white" : "black";
+  const dirs = [
+    [-1, -1], [-1, 0], [-1, 1],
+    [0, -1],          [0, 1],
+    [1, -1], [1, 0],  [1, 1],
+  ];
+
+  let result = [];
+
+  for (const [dr, dc] of dirs) {
+    let r = row + dr;
+    let c = col + dc;
+    let line = [];
+
+    while (r >= 0 && r < BOARD_SIZE && c >= 0 && c < BOARD_SIZE) {
+      if (board[r][c] === opponent) {
+        line.push([r, c]);
+      } else if (board[r][c] === color) {
+        if (line.length > 0) result = result.concat(line);
+        break;
       } else {
-        // neither have moves: end will be caught by render()
+        break;
       }
-      render();
-    } else {
-      // invalid move: ignore or optionally flash
-      // do nothing
+      r += dr;
+      c += dc;
     }
   }
 
-  restartBtn.addEventListener("click", ()=>{
-    init();
-  });
+  return result;
+}
 
-  // start
-  document.addEventListener("DOMContentLoaded", ()=> init());
-})();
+initBoard();

@@ -1,28 +1,16 @@
+<!-- この HTML ファイル名は任意です（index.html でなくても動きます） -->
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Othello (Minimal)</title>
-  <link rel="stylesheet" href="reversi00.css">
+  <meta charset="UTF-8">
+  <title>オセロ</title>
+  <link rel="stylesheet" href="reversi00.css"> <!-- CSS のファイル名も任意 -->
 </head>
 <body>
-  <h1 style="text-align:center;">Othello (Minimal)</h1>
 
-  <div style="text-align:center; margin-bottom:8px;">
-    <span id="turnLabel">ターン: <strong id="turn">黒</strong></span>
-    &nbsp;|&nbsp;
-    <span id="score">黒:0 白:0</span>
-    &nbsp;|&nbsp;
-    <button id="restart">リスタート</button>
-  </div>
+<h2>ターン：<span id="turn">黒</span></h2>
+<div id="board"></div>
 
-  <div id="board" aria-label="Othello board"></div>
-
-  <p style="text-align:center; color:#666; font-size:13px;">
-    ※ファイル名は任意です。HTML の &lt;script&gt; と &lt;link&gt; の参照先を必ず一致させてください。
-  </p>
-
-  <script src="external_files/reversi.js" defer></script>
+<script src="external_files/reversi.js"></script> <!-- JS も任意名 -->
 </body>
 </html>
