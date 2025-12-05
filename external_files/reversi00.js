@@ -1,11 +1,10 @@
-// この JS ファイル名は任意です（reversi.js でなくても動きます）
-
 const BOARD_SIZE = 8;
 let board = [];
 let currentTurn = "black";
 
 const boardDiv = document.getElementById("board");
 const turnSpan = document.getElementById("turn");
+const resetBtn = document.getElementById("resetBtn");
 
 // 初期化
 function initBoard() {
@@ -16,12 +15,16 @@ function initBoard() {
   board[4][3] = "black";
   board[4][4] = "white";
 
+  currentTurn = "black";
   renderBoard();
 }
 
 // 描画
 function renderBoard() {
   boardDiv.innerHTML = "";
+  let blackCount = 0;
+  let whiteCount = 0;
+
   for (let r = 0; r < BOARD_SIZE; r++) {
     for (let c = 0; c < BOARD_SIZE; c++) {
       const cell = document.createElement("div");
@@ -34,6 +37,9 @@ function renderBoard() {
         const d = document.createElement("div");
         d.classList.add("disc", disc);
         cell.appendChild(d);
+
+        if (disc === "black") blackCount++;
+        else whiteCount++;
       }
 
       cell.addEventListener("click", onCellClick);
@@ -42,6 +48,14 @@ function renderBoard() {
   }
 
   turnSpan.textContent = currentTurn === "black" ? "黒" : "白";
+
+  // 勝敗判定（盤が埋まったら）
+  const isFull = board.every(row => row.every(cell => cell !== null));
+  if (isFull) {
+    if (blackCount > whiteCount) alert(`黒の勝ち！ 黒:${blackCount} 白:${whiteCount}`);
+    else if (whiteCount > blackCount) alert(`白の勝ち！ 黒:${blackCount} 白:${whiteCount}`);
+    else alert(`引き分け！ 黒:${blackCount} 白:${whiteCount}`);
+  }
 }
 
 // クリック時処理
@@ -100,5 +114,8 @@ function getFlippableStones(row, col, color) {
 
   return result;
 }
+
+// リセットボタン
+resetBtn.addEventListener("click", initBoard);
 
 initBoard();
