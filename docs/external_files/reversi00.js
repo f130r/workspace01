@@ -1,11 +1,9 @@
-type Cell = "black" | "white" | null;
-
 const BOARD_SIZE = 8;
-let board: Cell[][] = [];
-let currentTurn: Cell = "black";
+let board = [];
+let currentTurn = "black";
 
-const boardDiv = document.getElementById("board") as HTMLDivElement;
-const turnSpan = document.getElementById("turn") as HTMLSpanElement;
+const boardDiv = document.getElementById("board");
+const turnSpan = document.getElementById("turn");
 
 // ボード初期化
 function initBoard() {
@@ -46,16 +44,16 @@ function renderBoard() {
 }
 
 // クリック時処理
-function onCellClick(e: MouseEvent) {
-  const target = e.currentTarget as HTMLDivElement;
-  const row = parseInt(target.dataset.row!);
-  const col = parseInt(target.dataset.col!);
+function onCellClick(e) {
+  const target = e.currentTarget;
+  const row = parseInt(target.dataset.row);
+  const col = parseInt(target.dataset.col);
 
   if (board[row][col] !== null) return; // すでに置かれている
 
   board[row][col] = currentTurn;
 
-  // 簡易版：ひっくり返す処理は省略
+  // ターン交代
   currentTurn = currentTurn === "black" ? "white" : "black";
   renderBoard();
 }
