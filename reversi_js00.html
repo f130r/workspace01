@@ -1,45 +1,28 @@
 <!DOCTYPE html>
-<html>
+<html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <title>Reversi</title>
-  <style>
-    #board {
-      display: grid;
-      grid-template-columns: repeat(8, 50px);
-      grid-template-rows: repeat(8, 50px);
-      gap: 2px;
-      width: 416px;
-      margin: 20px auto;
-      background: #0a5;
-      padding: 4px;
-    }
-    .cell {
-      width: 50px;
-      height: 50px;
-      background: #2a8;
-      position: relative;
-      cursor: pointer;
-    }
-    .black, .white {
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      position: absolute;
-      top: 5px;
-      left: 5px;
-    }
-    .black { background: black; }
-    .white { background: white; border: 2px solid #000; }
-  </style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Othello (Minimal)</title>
+  <link rel="stylesheet" href="reversi00.css">
 </head>
 <body>
+  <h1 style="text-align:center;">Othello (Minimal)</h1>
 
-  <div id="board"></div>
+  <div style="text-align:center; margin-bottom:8px;">
+    <span id="turnLabel">ターン: <strong id="turn">黒</strong></span>
+    &nbsp;|&nbsp;
+    <span id="score">黒:0 白:0</span>
+    &nbsp;|&nbsp;
+    <button id="restart">リスタート</button>
+  </div>
 
-  <!-- 🔥 JS を正しく読み込む部分（ここが重要） -->
-  <script src="external_files/reversi00.js"></script>
+  <div id="board" aria-label="Othello board"></div>
 
+  <p style="text-align:center; color:#666; font-size:13px;">
+    ※ファイル名は任意です。HTML の &lt;script&gt; と &lt;link&gt; の参照先を必ず一致させてください。
+  </p>
 
+  <script src="external_files/reversi.js" defer></script>
 </body>
 </html>
