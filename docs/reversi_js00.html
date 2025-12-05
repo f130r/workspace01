@@ -1,52 +1,44 @@
-const boardSize = 8;
-let board = [];
-
-function initBoard() {
-  board = Array(boardSize).fill(null).map(() => Array(boardSize).fill(0));
-
-  // 初期配置
-  board[3][3] = 2; // white
-  board[4][4] = 2;
-  board[3][4] = 1; // black
-  board[4][3] = 1;
-}
-
-function renderBoard() {
-  const boardDiv = document.getElementById("board");
-  boardDiv.innerHTML = "";
-
-  for (let y = 0; y < boardSize; y++) {
-    for (let x = 0; x < boardSize; x++) {
-      const cell = document.createElement("div");
-      cell.className = "cell";
-      cell.addEventListener("click", () => placeStone(x, y));
-
-      if (board[y][x] === 1) {
-        const stone = document.createElement("div");
-        stone.className = "black";
-        cell.appendChild(stone);
-      } else if (board[y][x] === 2) {
-        const stone = document.createElement("div");
-        stone.className = "white";
-        cell.appendChild(stone);
-      }
-
-      boardDiv.appendChild(cell);
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Reversi</title>
+  <style>
+    #board {
+      display: grid;
+      grid-template-columns: repeat(8, 50px);
+      grid-template-rows: repeat(8, 50px);
+      gap: 2px;
+      width: 416px;
+      margin: 20px auto;
+      background: #0a5;
+      padding: 4px;
     }
-  }
-}
+    .cell {
+      width: 50px;
+      height: 50px;
+      background: #2a8;
+      position: relative;
+      cursor: pointer;
+    }
+    .black, .white {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      position: absolute;
+      top: 5px;
+      left: 5px;
+    }
+    .black { background: black; }
+    .white { background: white; border: 2px solid #000; }
+  </style>
+</head>
+<body>
 
-function placeStone(x, y) {
-  if (board[y][x] !== 0) return;
+  <div id="board"></div>
 
-  board[y][x] = 1; // 仮に黒で固定（デモ用）
+  <!-- 🔥 JS を正しく読み込む部分（ここが重要） -->
+  <script src="external_files/reversi00.js"></script>
 
-  renderBoard();
-}
-
-function start() {
-  initBoard();
-  renderBoard();
-}
-
-start();
+</body>
+</html>
