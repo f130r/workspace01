@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🍴 ランダム決定ツール</title>
+
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            text-align: center;
+            padding: 20px;
+            background-color: #f0f8ff; /* Light blue background */
+            color: #333;
+        }
+        #container {
+            max-width: 500px;
+            margin: 40px auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+        }
+        h1 {
+            color: #4682b4; /* Steel blue */
+            margin-bottom: 25px;
+        }
+        textarea {
+            width: 90%;
+            height: 120px;
+            padding: 10px;
+            margin-bottom: 20px;
+            border: 2px solid #ccc;
+            border-radius: 6px;
+            resize: vertical;
+        }
+        button {
+            padding: 12px 25px;
+            font-size: 18px;
+            cursor: pointer;
+            background-color: #4682b4;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #386f9f;
+        }
+        #result {
+            margin-top: 40px;
+            padding: 15px;
+            font-size: 28px;
+            font-weight: bold;
+            color: #dc143c; /* Crimson red for emphasis */
+            border: 3px dashed #dc143c;
+            border-radius: 8px;
+            min-height: 60px; /* Ensure space even if empty */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <h1>🍴 お昼ご飯 ランダム決定ツール</h1>
+
+        <p>選択肢を**改行**して入力してください（例：ラーメン、カレー、パスタ、お弁当）</p>
+
+        <textarea id="choices" placeholder="例：ラーメン&#10;カレーライス&#10;パスタ&#10;コンビニ弁当"></textarea>
+
+        <button onclick="selectRandom()">✨ 今日のご飯を決定！</button>
+
+        <div id="result">何を選びますか？</div>
+    </div>
+
+    <script>
+        function selectRandom() {
+            const inputElement = document.getElementById('choices');
+            const resultElement = document.getElementById('result');
+
+            // 入力されたテキストを改行文字 ('\n') で分割し、前後の空白を除去し、空の項目を除外
+            const choices = inputElement.value
+                                        .split('\n')
+                                        .map(choice => choice.trim())
+                                        .filter(choice => choice.length > 0);
+
+            if (choices.length === 0) {
+                resultElement.textContent = "⚠️ 選択肢を一つ以上入力してください。";
+                return;
+            }
+
+            // ランダムに項目を選択 (Math.random() を使用)
+            const randomIndex = Math.floor(Math.random() * choices.length);
+            const selectedChoice = choices[randomIndex];
+
+            // 結果を表示
+            resultElement.textContent = `🎉 決定！: ${selectedChoice} に決定しました！`;
+        }
+    </script>
+</body>
+</html>
