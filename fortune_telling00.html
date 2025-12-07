@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>今日の誕生月占いランキング</title>
+    <style>
+        body {
+            font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
+            background-color: #f0f4f8;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+        .container {
+            width: 100%;
+            max-width: 600px;
+            background: #fff;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+        }
+        .date-display {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #666;
+            font-size: 0.9rem;
+        }
+        .ranking-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .ranking-item {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            background-color: #fff;
+            border: 1px solid #e1e8ed;
+            transition: transform 0.2s;
+        }
+        .ranking-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        .rank {
+            font-size: 1.2rem;
+            font-weight: bold;
+            width: 50px;
+            text-align: center;
+            color: #7f8c8d;
+        }
+        .month {
+            font-size: 1.1rem;
+            font-weight: bold;
+            margin-right: 15px;
+            white-space: nowrap;
+        }
+        .comment {
+            font-size: 0.9rem;
+            color: #555;
+            flex: 1;
+        }
+
+        /* 順位別のスタイル */
+        .rank-1 {
+            background-color: #fff8e1;
+            border-color: #ffecb3;
+        }
+        .rank-1 .rank { color: #f1c40f; font-size: 1.5rem; }
+        .rank-1 .month { color: #d35400; }
+
+        .rank-2 { border-color: #dfe6e9; }
+        .rank-2 .rank { color: #95a5a6; }
+
+        .rank-3 { border-color: #dfe6e9; }
+        .rank-3 .rank { color: #cd7f32; }
+
+        .rank-12 {
+            background-color: #f8f9fa;
+            border-style: dashed;
+        }
+        .rank-12 .rank { color: #2c3e50; }
+
+        .footer-note {
+            text-align: center;
+            margin-top: 30px;
+            font-size: 0.8rem;
+            color: #aaa;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🔮 今日の運勢ランキング</h1>
+    <div class="date-display" id="dateDisplay"></div>
+    <ul class="ranking-list" id="rankingList">
+        </ul>
+    <div class="footer-note">
+        ※この占いはランダムに生成されています
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // 今日の日付を表示
+        const now = new Date();
+        const dateStr = now.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' });
+        document.getElementById('dateDisplay').textContent = dateStr;
+
+        // 1月〜12月の配列を作成
+        const months = Array.from({ length: 12 }, (_, i) => i + 1);
+
+        // Fisher-Yates シャッフルアルゴリズム
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        // 月をシャッフルしてランキングを決定
+        const ranking = shuffle(months);
+
+        // 順位に応じたコメントを生成する関数
+        function getComment(rank) {
+            if (rank === 1) return "最高の一日！新しいことに挑戦するチャンスです✨";
+            if (rank === 2) return "運気は上々。笑顔で過ごせばさらにハッピーに！";
+            if (rank === 3) return "安定した一日。美味しいものを食べてリラックスしよう。";
+            if (rank >= 4 && rank <= 8) return "平凡こそ幸せ。マイペースに進めば結果オーライ。";
+            if (rank >= 9 && rank <= 11) return "焦りは禁物。深呼吸して落ち着いて行動しましょう。";
+            if (rank === 12) return "要注意デー。でも慎重に行動すれば大きなミスは防げます🛡️";
+            return "";
+        }
+
+        const listContainer = document.getElementById('rankingList');
+
+        // ランキングのHTMLを生成して表示
+        ranking.forEach((month, index) => {
+            const rank = index + 1;
+            const li = document.createElement('li');
+            li.className = `ranking-item rank-${rank}`;
+
+            li.innerHTML = `
+                <span class="rank">${rank}位</span>
+                <span class="month">${month}月生まれ</span>
+                <span class="comment">${getComment(rank)}</span>
+            `;
+
+            listContainer.appendChild(li);
+        });
+    });
+</script>
+
+</body>
+</html>
