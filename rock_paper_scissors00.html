@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>じゃんけんゲーム</title>
+    <style>
+        /* --- CSS部分 --- */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #f4f7f6;
+            color: #333;
+        }
+
+        .container {
+            background-color: #ffffff;
+            padding: 30px 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            width: 90%;
+            max-width: 500px;
+        }
+
+        h1 {
+            color: #4a90e2;
+            margin-bottom: 20px;
+        }
+
+        #result-display {
+            font-size: 1.2em;
+            margin: 20px 0;
+            padding: 10px;
+            border-radius: 8px;
+            min-height: 2em; /* 結果表示エリアの確保 */
+        }
+
+        #player-choice, #cpu-choice {
+            font-size: 4em;
+            margin: 10px;
+            display: inline-block;
+        }
+
+        .choices {
+            margin-bottom: 30px;
+        }
+
+        .choice-button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 3em;
+            padding: 10px 15px;
+            margin: 0 10px;
+            transition: transform 0.1s ease-in-out, background-color 0.2s;
+            border-radius: 10px;
+        }
+
+        .choice-button:hover {
+            transform: scale(1.1);
+            background-color: #e0eafc;
+        }
+
+        /* スコアボード */
+        #scoreboard {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            background-color: #fafafa;
+        }
+        #scoreboard p {
+            margin: 5px 0;
+            font-weight: bold;
+        }
+
+        .win { background-color: #d4edda; color: #155724; }
+        .lose { background-color: #f8d7da; color: #721c24; }
+        .draw { background-color: #fff3cd; color: #856404; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>✊ ✌️ ✋ じゃんけんゲーム ✋ ✌️ ✊</h1>
+
+        <div class="choices">
+            <span id="player-choice">❓</span>
+            <span> vs </span>
+            <span id="cpu-choice">❓</span>
+        </div>
+
+        <div id="result-display">
+            下のボタンを押してじゃんけんを開始！
+        </div>
+
+        <div id="buttons">
+            <button class="choice-button" onclick="playGame(0)">
+                ✊
+            </button>
+            <button class="choice-button" onclick="playGame(1)">
+                ✌️
+            </button>
+            <button class="choice-button" onclick="playGame(2)">
+                ✋
+            </button>
+        </div>
+
+        <div id="scoreboard">
+            <p>スコア: <span id="player-score">0</span> 勝 - <span id="cpu-score">0</span> 敗</p>
+            <p>引き分け: <span id="draw-score">0</span></p>
+        </div>
+
+    </div>
+
+    <script>
+        /* --- JavaScript部分 --- */
+
+        // 0: グー (✊), 1: チョキ (✌️), 2: パー (✋)
+        const choices = ['✊', '✌️', '✋'];
+
+        let playerScore = 0;
+        let cpuScore = 0;
+        let drawScore = 0;
+
+        const resultDisplay = document.getElementById('result-display');
+        const playerChoiceDisplay = document.getElementById('player-choice');
+        const cpuChoiceDisplay = document.getElementById('cpu-choice');
+        const playerScoreEl = document.getElementById('player-score');
+        const cpuScoreEl = document.getElementById('cpu-score');
+        const drawScoreEl = document.getElementById('draw-score');
+
+        /**
+         * じゃんけんのゲームロジック
+         * @param {number} playerSelection プレイヤーの選択 (0, 1, or 2)
+         */
+        function playGame(playerSelection) {
+            // CPUの選択 (0, 1, or 2 のランダム)
+            const cpuSelection = Math.floor(Math.random() * 3);
+
+            // 選択された絵文字を表示
+            playerChoiceDisplay.textContent = choices[playerSelection];
+            cpuChoiceDisplay.textContent = choices[cpuSelection];
+
+            let resultText = '';
+            let resultClass = ''; // スタイルのためのクラス名
+
+            // 勝敗判定
+            // (A - B + 3) % 3 の結果: 0=引き分け, 1=CPUの勝ち, 2=プレイヤーの勝ち
+            const outcome = (playerSelection - cpuSelection + 3) % 3;
+
+            if (outcome === 0) {
+                // 引き分け
+                resultText = 'ドロー！ あいこです。';
+                resultClass = 'draw';
+                drawScore++;
+            } else if (outcome === 2) {
+                // プレイヤーの勝ち
+                resultText = '🎉 勝ち！ おめでとうございます！';
+                resultClass = 'win';
+                playerScore++;
+            } else { // outcome === 1
+                // CPUの勝ち (プレイヤーの負け)
+                resultText = '😭 負け！ CPUの勝利です。';
+                resultClass = 'lose';
+                cpuScore++;
+            }
+
+            // 結果の表示を更新
+            resultDisplay.textContent = resultText;
+
+            // スタイルのためのクラスを付け替える
+            resultDisplay.className = ''; // 一旦全て削除
+            resultDisplay.classList.add(resultClass);
+
+            // スコアボードを更新
+            updateScoreboard();
+        }
+
+        /**
+         * スコア表示を更新する
+         */
+        function updateScoreboard() {
+            playerScoreEl.textContent = playerScore;
+            cpuScoreEl.textContent = cpuScore;
+            drawScoreEl.textContent = drawScore;
+        }
+
+        // 初期表示時にもスコアボードを更新しておく（全て0で）
+        updateScoreboard();
+
+    </script>
+</body>
+</html>
