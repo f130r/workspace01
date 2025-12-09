@@ -1,0 +1,453 @@
+ご要望の要件（HTML1枚、外部ファイルなし、絵文字使用、あっち向いてホイのロジック）に基づいたWebアプリケーションのコードです。
+
+```html
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>あっち向いてホイ！ - Emoji Battle</title>
+    <style>
+        /* --- CSSスタイル設定 --- */
+        :root {
+            --primary-color: #4a90e2;
+            --bg-color: #f0f4f8;
+            --card-bg: #ffffff;
+            --text-color: #333;
+            --win-color: #e74c3c;
+            --lose-color: #34495e;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background-color: var(--bg-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: var(--text-color);
+        }
+
+        /* ゲームのメインコンテナ */
+        .game-container {
+            background-color: var(--card-bg);
+            width: 90%;
+            max-width: 400px;
+            padding: 20px;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            transition: transform 0.3s;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            margin: 0;
+            color: var(--primary-color);
+        }
+
+        /* ステータス表示エリア */
+        .status-bar {
+            background: #e1e8ed;
+            padding: 12px;
+            border-radius: 10px;
+            font-weight: bold;
+            font-size: 1rem;
+            min-height: 1.5em;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .highlight-win { color: var(--win-color); }
+        .highlight-lose { color: var(--lose-color); }
+
+        /* メインのキャラクター・手・矢印表示エリア */
+        .battle-field {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: space-around;
+            min-height: 180px;
+            background: #fafafa;
+            border: 2px dashed #ddd;
+            border-radius: 15px;
+            padding: 20px 10px;
+        }
+
+        .character-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 40%;
+        }
+
+        .role-badge {
+            font-size: 0.7rem;
+            background: #333;
+            color: #fff;
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-bottom: 5px;
+            opacity: 0; /* デフォルトは非表示 */
+            transition: opacity 0.3s;
+        }
+
+        .role-badge.visible {
+            opacity: 1;
+        }
+
+        .role-badge.attacker { background: #e74c3c; } /* 攻撃側：赤 */
+        .role-badge.defender { background: #3498db; } /* 守備側：青 */
+
+        .label {
+            font-size: 0.9rem;
+            font-weight: bold;
+            color: #555;
+            margin-bottom: 5px;
+        }
+
+        .emoji-display {
+            font-size: 3.5rem;
+            line-height: 1;
+            transition: transform 0.2s;
+            height: 60px; /* 高さ確保 */
+        }
+
+        .vs-text {
+            font-weight: bold;
+            color: #ccc;
+            font-size: 1.2rem;
+        }
+
+        /* ボタンエリア */
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            min-height: 120px; /* ガタつき防止 */
+            justify-content: center;
+        }
+
+        .btn-group {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        /* ボタンの共通スタイル */
+        button {
+            background-color: var(--card-bg);
+            border: 2px solid #ddd;
+            border-radius: 12px;
+            padding: 10px 15px;
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            outline: none;
+            min-width: 60px;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.1);
+            border-color: var(--primary-color);
+        }
+
+        button:active {
+            transform: translateY(0);
+            background-color: #f0f0f0;
+        }
+
+        /* リセットボタン */
+        .reset-btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            width: 80%;
+            margin: 0 auto;
+            font-size: 1.2rem;
+            font-weight: bold;
+            padding: 12px;
+        }
+
+        .reset-btn:hover {
+            background-color: #357abd;
+        }
+
+        /* ユーティリティ */
+        .hidden {
+            display: none !important;
+        }
+
+        /* アニメーション */
+        .shake {
+            animation: shake 0.4s;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        /* レスポンシブ調整 */
+        @media (max-width: 350px) {
+            .emoji-display { font-size: 2.5rem; }
+            button { font-size: 1.2rem; padding: 8px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="game-container">
+        <h1>あっち向いてホイ！ 🎌</h1>
+
+        <div id="statusText" class="status-bar">じゃんけん...</div>
+
+        <div class="battle-field" id="battleField">
+            <div class="character-box">
+                <span class="label">CPU</span>
+                <span id="cpuRole" class="role-badge">Wait</span>
+                <div id="cpuDisplay" class="emoji-display">🤖</div>
+            </div>
+
+            <div class="vs-text">VS</div>
+
+            <div class="character-box">
+                <span class="label">YOU</span>
+                <span id="playerRole" class="role-badge">Wait</span>
+                <div id="playerDisplay" class="emoji-display">🤔</div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <div id="jankenPanel" class="btn-group">
+                <button onclick="playJanken('rock')">✊</button>
+                <button onclick="playJanken('scissors')">✌️</button>
+                <button onclick="playJanken('paper')">🖐</button>
+            </div>
+
+            <div id="hoiPanel" class="btn-group hidden">
+                <button onclick="playHoi('up')">👆</button>
+                <button onclick="playHoi('down')">👇</button>
+                <button onclick="playHoi('left')">👈</button>
+                <button onclick="playHoi('right')">👉</button>
+            </div>
+
+            <div id="resetPanel" class="hidden">
+                <button class="reset-btn" onclick="resetGame()">もう一度遊ぶ 🔄</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /* --- JavaScriptロジック --- */
+
+        // 状態定数
+        const STATE = {
+            JANKEN: 'janken',
+            HOI: 'hoi',
+            END: 'end'
+        };
+
+        // 絵文字定義
+        const HANDS = { rock: '✊', scissors: '✌️', paper: '🖐' };
+        // 方向（指差し）
+        const FINGERS = { up: '👆', down: '👇', left: '👈', right: '👉' };
+        // 方向（顔を向ける - わかりやすく矢印と顔を併用するか、シンプルに矢印で表現）
+        // ここでは判定の明確化のため、ロジック上は方向キー、表示は矢印を使用します
+
+        // グローバル変数
+        let currentState = STATE.JANKEN;
+        let isPlayerAttacker = false; // プレイヤーが攻撃側かどうか
+
+        // DOM要素
+        const statusText = document.getElementById('statusText');
+        const cpuDisplay = document.getElementById('cpuDisplay');
+        const playerDisplay = document.getElementById('playerDisplay');
+        const cpuRole = document.getElementById('cpuRole');
+        const playerRole = document.getElementById('playerRole');
+        const jankenPanel = document.getElementById('jankenPanel');
+        const hoiPanel = document.getElementById('hoiPanel');
+        const resetPanel = document.getElementById('resetPanel');
+        const battleField = document.getElementById('battleField');
+
+        /**
+         * ゲーム初期化・リセット
+         */
+        function resetGame() {
+            currentState = STATE.JANKEN;
+            isPlayerAttacker = false;
+
+            // UIリセット
+            statusText.textContent = "いざ、勝負！じゃんけん...";
+            cpuDisplay.textContent = "🤖";
+            playerDisplay.textContent = "🤔";
+
+            // ロールバッジ非表示
+            cpuRole.className = "role-badge";
+            playerRole.className = "role-badge";
+
+            // パネル切り替え
+            jankenPanel.classList.remove('hidden');
+            hoiPanel.classList.add('hidden');
+            resetPanel.classList.add('hidden');
+        }
+
+        /**
+         * 1. じゃんけん処理
+         */
+        function playJanken(playerHandKey) {
+            if (currentState !== STATE.JANKEN) return;
+
+            // CPUの手を決定
+            const keys = ['rock', 'scissors', 'paper'];
+            const cpuHandKey = keys[Math.floor(Math.random() * keys.length)];
+
+            // 表示更新
+            playerDisplay.textContent = HANDS[playerHandKey];
+            cpuDisplay.textContent = HANDS[cpuHandKey];
+
+            // 判定
+            if (playerHandKey === cpuHandKey) {
+                // あいこ
+                statusText.textContent = "あいこで...";
+                battleField.classList.remove('shake');
+                void battleField.offsetWidth; // リフロー発生
+                battleField.classList.add('shake');
+                return; // じゃんけん継続
+            }
+
+            // 勝敗あり -> ホイへ移行
+            // プレイヤーが勝つ条件
+            const isWin =
+                (playerHandKey === 'rock' && cpuHandKey === 'scissors') ||
+                (playerHandKey === 'scissors' && cpuHandKey === 'paper') ||
+                (playerHandKey === 'paper' && cpuHandKey === 'rock');
+
+            isPlayerAttacker = isWin;
+
+            // UI更新（少し待機してからフェーズ移行）
+            jankenPanel.classList.add('hidden');
+
+            const resultMsg = isWin ? "勝ち！" : "負け！";
+            statusText.innerHTML = `${resultMsg} <br>あっち向いて...`;
+
+            setTimeout(() => {
+                transitionToHoi();
+            }, 800);
+        }
+
+        /**
+         * ホイフェーズへの移行設定
+         */
+        function transitionToHoi() {
+            currentState = STATE.HOI;
+
+            // ロール表示
+            if (isPlayerAttacker) {
+                statusText.textContent = "ホイ！(方向を指せ！)";
+                playerRole.textContent = "攻撃";
+                playerRole.className = "role-badge visible attacker";
+                cpuRole.textContent = "守備";
+                cpuRole.className = "role-badge visible defender";
+            } else {
+                statusText.textContent = "ホイ！(顔を背けろ！)";
+                playerRole.textContent = "守備";
+                playerRole.className = "role-badge visible defender";
+                cpuRole.textContent = "攻撃";
+                cpuRole.className = "role-badge visible attacker";
+            }
+
+            // 表示を準備状態に
+            playerDisplay.textContent = isPlayerAttacker ? "👆?" : "😶";
+            cpuDisplay.textContent = isPlayerAttacker ? "😶" : "👆?";
+
+            hoiPanel.classList.remove('hidden');
+        }
+
+        /**
+         * 2. あっち向いてホイ処理
+         */
+        function playHoi(playerDirKey) {
+            if (currentState !== STATE.HOI) return;
+
+            // CPUの方向決定
+            const keys = ['up', 'down', 'left', 'right'];
+            const cpuDirKey = keys[Math.floor(Math.random() * keys.length)];
+
+            // 表示更新
+            playerDisplay.textContent = FINGERS[playerDirKey];
+            cpuDisplay.textContent = FINGERS[cpuDirKey];
+
+            // UI一時ロック
+            hoiPanel.classList.add('hidden');
+
+            // 判定処理（少し間を持たせる）
+            setTimeout(() => {
+                checkHoiResult(playerDirKey, cpuDirKey);
+            }, 500);
+        }
+
+        /**
+         * ホイの結果判定
+         */
+        function checkHoiResult(playerDir, cpuDir) {
+            const isMatch = (playerDir === cpuDir);
+
+            if (isMatch) {
+                // 方向一致 ＝ 攻撃側の勝利 ＝ ゲーム決着
+                if (isPlayerAttacker) {
+                    showEndGame(true); // プレイヤー勝利
+                } else {
+                    showEndGame(false); // プレイヤー敗北
+                }
+            } else {
+                // 不一致 ＝ セーフ ＝ じゃんけんへ戻る
+                statusText.textContent = "セーフ！じゃんけんに戻ります";
+                setTimeout(() => {
+                    // じゃんけんへ復帰
+                    currentState = STATE.JANKEN;
+                    jankenPanel.classList.remove('hidden');
+
+                    // 表示リセット
+                    cpuDisplay.textContent = "🤖";
+                    playerDisplay.textContent = "🤔";
+                    statusText.textContent = "じゃんけん...";
+
+                    // ロールバッジ消去
+                    cpuRole.className = "role-badge";
+                    playerRole.className = "role-badge";
+                }, 1500);
+            }
+        }
+
+        /**
+         * ゲーム終了表示
+         */
+        function showEndGame(isPlayerWin) {
+            currentState = STATE.END;
+            resetPanel.classList.remove('hidden');
+
+            if (isPlayerWin) {
+                statusText.innerHTML = "🎉 <span class='highlight-win'>あなたの勝ち！</span> 🎉";
+                playerDisplay.textContent = "😆";
+                cpuDisplay.textContent = "😵";
+            } else {
+                statusText.innerHTML = "💀 <span class='highlight-lose'>あなたの負け...</span> 💀";
+                playerDisplay.textContent = "😭";
+                cpuDisplay.textContent = "😎";
+            }
+        }
+    </script>
+</body>
+</html>
+```
