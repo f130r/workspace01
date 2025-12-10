@@ -4,7 +4,94 @@
     <meta charset="UTF-8">
     <title>オンラインコインパーキング入出庫システム</title>
     <style>
-        /* ここにCSSスタイルを記述（セクション5参照） */
+        /* CSSスタイルの方針 */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 20px;
+            background-color: #f4f7f9;
+            color: #333;
+        }
+        h1, h2 {
+            color: #1e88e5;
+            border-bottom: 2px solid #e0e0e0;
+            padding-bottom: 5px;
+        }
+        #entry-area, #log-area {
+            background-color: #ffffff;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        #entry-area div {
+            margin-bottom: 10px;
+        }
+        label {
+            display: inline-block;
+            width: 120px;
+            font-weight: bold;
+        }
+        input[type="text"], select {
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            width: 200px;
+        }
+        button {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            opacity: 0.9;
+        }
+        #entry-area button {
+            background-color: #4caf50;
+            color: white;
+            margin-top: 10px;
+        }
+
+        /* テーブルスタイル */
+        #parking-log-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        #parking-log-table th, #parking-log-table td {
+            border: 1px solid #ddd;
+            padding: 12px 8px;
+            text-align: left;
+        }
+        #parking-log-table th {
+            background-color: #e0f2f1;
+            color: #00796b;
+            font-weight: bold;
+        }
+
+        /* ステータスごとの色分け */
+        .status-入庫 {
+            background-color: #e3f2fd; /* 薄い青 */
+            color: #1e88e5;
+            font-weight: bold;
+        }
+        .status-出庫 {
+            background-color: #f5f5f5; /* 灰色 */
+            color: #757575;
+        }
+        .status-不正駐車 {
+            background-color: #ffebee; /* 薄い赤 */
+            color: #e53935;
+            font-weight: bold;
+        }
+        .exit-button {
+            background-color: #ff9800;
+            color: white;
+            padding: 5px 10px;
+            font-size: 0.9em;
+        }
     </style>
 </head>
 <body>
@@ -14,7 +101,7 @@
         <h2>入庫登録</h2>
         <div>
             <label for="plate-number">車両ナンバー:</label>
-            <input type="text" id="plate-number" placeholder="例: 1234">
+            <input type="text" id="plate-number" placeholder="例: 1234" required>
         </div>
         <div>
             <label for="car-color">車の色:</label>
@@ -67,7 +154,193 @@
     </div>
 
     <script>
-        /* ここにJavaScriptコードを記述（セクション2〜4参照） */
+        // --- データ構造 ---
+        let parkingRecords = [];
+        let nextId = 1; // ID自動採番用
+
+        // --- 3. 料金計算JavaScript関数（最重要）---
+        /**
+         * 駐車時間に基づき料金を計算する関数
+         * @param {string} entryTime - 入庫時刻 (ISO 8601形式: YYYY-MM-DDTHH:mm:ss)
+         * @param {string} exitTime - 出庫時刻 (ISO 8601形式)
+         * @returns {number} 計算された清算金額 (円)
+         */
+        function calculateParkingFee(entryTime, exitTime) {
+            const entry = new Date(entryTime);
+            const exit = new Date(exitTime);
+
+            // 駐車時間（ミリ秒）
+            const durationMs = exit - entry;
+            if (durationMs <= 0) {
+                return 0; // 時間が不正な場合は0円
+            }
+
+            // 駐車時間（時間）: 1分でも超えたら次の1時間として切り上げる
+            const durationHours = Math.ceil(durationMs / (1000 * 60 * 60));
+
+            // 料金体系定数
+            const cycleHours = 12;      // 1サイクル12時間
+            const cycleFee = 300;       // 12時間までの最大料金
+            const initialFeeHours = 2;  // 1時間100円の適用時間（2時間まで）
+            const initialFeeRate = 100; // 1時間あたりの料金
+
+            let totalFee = 0;
+            let remainingHours = durationHours;
+
+            // 12時間ごとのサイクルで料金を計算し、合計料金を算出する
+            while (remainingHours > 0) {
+                // 現在のサイクルでの利用時間（最大12時間）
+                const currentCycleDuration = Math.min(remainingHours, cycleHours);
+
+                // 料金計算ロジック（12時間サイクル内）
+                if (currentCycleDuration <= initialFeeHours) {
+                    // 2時間以内: 1時間毎に100円
+                    totalFee += currentCycleDuration * initialFeeRate;
+                } else {
+                    // 2時間超〜12時間まで: 一律300円
+                    totalFee += cycleFee;
+                }
+
+                // 次のサイクルへ
+                remainingHours -= cycleHours;
+            }
+
+            // 最終的な合計料金を返す
+            return totalFee;
+        }
+
+        // --- 4. 主要機能のJavaScript関数 ---
+
+        /**
+         * 駐車時間の表示用フォーマットを計算する
+         * @param {string} entryTime - 入庫時刻
+         * @param {string | null} exitTime - 出庫時刻
+         * @returns {string} フォーマットされた利用時間 (例: "05時間30分" または "利用中")
+         */
+        function getFormattedDuration(entryTime, exitTime) {
+            if (!exitTime) return "利用中";
+
+            const entry = new Date(entryTime);
+            const exit = new Date(exitTime);
+
+            let durationMs = exit - entry;
+            if (durationMs < 0) return "エラー";
+
+            const hours = Math.floor(durationMs / (1000 * 60 * 60));
+            durationMs -= hours * (1000 * 60 * 60);
+            const minutes = Math.floor(durationMs / (1000 * 60));
+
+            // XX時間XX分の形式で返す
+            return `${String(hours).padStart(2, '0')}時間${String(minutes).padStart(2, '0')}分`;
+        }
+
+        /**
+         * 入庫登録処理
+         */
+        function registerEntry() {
+            const plate = document.getElementById('plate-number').value;
+            const color = document.getElementById('car-color').value;
+            const type = document.getElementById('car-type').value;
+            const maker = document.getElementById('car-maker').value;
+
+            if (!plate) {
+                alert('車両ナンバーは必須です。');
+                return;
+            }
+
+            const now = new Date().toISOString(); // 現在時刻をISO形式で取得
+
+            const newRecord = {
+                id: nextId++,
+                plate: plate,
+                entryTime: now,
+                exitTime: null,
+                carColor: color,
+                carType: type,
+                carMaker: maker,
+                fee: 0,
+                status: "入庫" // '入庫', '出庫', '不正駐車'
+            };
+
+            parkingRecords.push(newRecord);
+            alert(`車両ナンバー ${plate} の入庫を登録しました。ID: ${newRecord.id}`);
+
+            // フォームのリセット（プレートナンバー以外は任意）
+            document.getElementById('plate-number').value = '';
+            document.getElementById('car-color').value = '';
+
+            displayLog(); // 履歴表示を更新
+        }
+
+        /**
+         * 出庫処理と料金計算の呼び出し
+         * @param {number} id - 駐車記録ID
+         */
+        function processExit(id) {
+            const record = parkingRecords.find(r => r.id === id);
+
+            if (!record || record.status !== '入庫') {
+                alert('対象の入庫記録が見つからないか、既に出庫済みです。');
+                return;
+            }
+
+            const now = new Date().toISOString();
+            record.exitTime = now;
+
+            // 料金計算を実行
+            const fee = calculateParkingFee(record.entryTime, record.exitTime);
+            record.fee = fee;
+            record.status = '出庫';
+
+            alert(`ID: ${id}, 車両ナンバー: ${record.plate}\n清算金額: ${fee}円です。`);
+
+            displayLog(); // 履歴表示を更新
+        }
+
+        /**
+         * 履歴テーブルの更新/表示処理
+         */
+        function displayLog() {
+            const tbody = document.querySelector('#parking-log-table tbody');
+            tbody.innerHTML = ''; // 既存の行をクリア
+
+            // 最新の記録が上に来るように逆順で処理
+            parkingRecords.slice().reverse().forEach(record => {
+                const row = tbody.insertRow();
+
+                // 行のクラス設定（ステータスに応じて色分け）
+                row.className = `status-${record.status}`;
+
+                // 利用時間の計算とフォーマット
+                const duration = getFormattedDuration(record.entryTime, record.exitTime);
+
+                // 各セルにデータを挿入
+                row.insertCell().textContent = record.id;
+                row.insertCell().textContent = record.plate;
+                // 時刻フォーマットは適宜調整 (今回はISO形式から現地時刻に変換)
+                row.insertCell().textContent = new Date(record.entryTime).toLocaleTimeString('ja-JP', {hour: '2-digit', minute:'2-digit', second:'2-digit'});
+                row.insertCell().textContent = record.exitTime ? new Date(record.exitTime).toLocaleTimeString('ja-JP', {hour: '2-digit', minute:'2-digit', second:'2-digit'}) : '―';
+                row.insertCell().textContent = duration;
+                row.insertCell().textContent = record.fee > 0 ? `${record.fee}円` : '―';
+                row.insertCell().textContent = record.status;
+
+                // 操作ボタンのセル
+                const actionCell = row.insertCell();
+                if (record.status === '入庫') {
+                    const button = document.createElement('button');
+                    button.textContent = '出庫・清算';
+                    button.className = 'exit-button';
+                    button.onclick = () => processExit(record.id);
+                    actionCell.appendChild(button);
+                } else {
+                    actionCell.textContent = '完了';
+                }
+            });
+        }
+
+        // ページロード時に一度表示を初期化（データがローカルストレージにないため空の状態で開始）
+        document.addEventListener('DOMContentLoaded', displayLog);
+
     </script>
 </body>
 </html>
