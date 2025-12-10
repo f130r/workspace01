@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>オンラインコインパーキング入出庫システム</title>
+    <style>
+        /* ここにCSSスタイルを記述（セクション5参照） */
+    </style>
+</head>
+<body>
+    <h1>🅿️ オンラインコインパーキング</h1>
+
+    <div id="entry-area">
+        <h2>入庫登録</h2>
+        <div>
+            <label for="plate-number">車両ナンバー:</label>
+            <input type="text" id="plate-number" placeholder="例: 1234">
+        </div>
+        <div>
+            <label for="car-color">車の色:</label>
+            <input type="text" id="car-color" placeholder="例: 白">
+        </div>
+        <div>
+            <label for="car-type">車種:</label>
+            <select id="car-type">
+                <option value="軽">軽</option>
+                <option value="SUV">SUV</option>
+                <option value="セダン">セダン</option>
+                <option value="小型">小型</option>
+                <option value="ワゴン">ワゴン</option>
+                <option value="box">Box</option>
+            </select>
+        </div>
+        <div>
+            <label for="car-maker">販売会社:</label>
+            <select id="car-maker">
+                <option value="Toyota">Toyota</option>
+                <option value="Honda">Honda</option>
+                <option value="Nissan">Nissan</option>
+                <option value="Suzuki">Suzuki</option>
+                <option value="Mazda">Mazda</option>
+            </select>
+        </div>
+        <button onclick="registerEntry()">入庫</button>
+    </div>
+
+    <hr>
+
+    <div id="log-area">
+        <h2>駐車状況・履歴</h2>
+        <table id="parking-log-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>車両ナンバー</th>
+                    <th>入庫時刻</th>
+                    <th>出庫時刻</th>
+                    <th>利用時間</th>
+                    <th>料金</th>
+                    <th>ステータス</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                </tbody>
+        </table>
+    </div>
+
+    <script>
+        /* ここにJavaScriptコードを記述（セクション2〜4参照） */
+    </script>
+</body>
+</html>
