@@ -155,3 +155,410 @@
             font-size: 0.8rem;
             padding: 5px 10px;
             margin-right: 5px;
+        }
+
+        /* ツールバー（検索・CSV） */
+        .toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+            gap: 10px;
+        }
+
+        .search-box {
+            flex-grow: 1;
+        }
+
+        /* リスト表示 */
+        .report-list {
+            list-style: none;
+        }
+
+        .report-item {
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 20px;
+            margin-bottom: 15px;
+            border-left: 5px solid var(--primary-color);
+            position: relative;
+        }
+
+        .report-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            border-bottom: 1px solid var(--bg-color);
+            padding-bottom: 10px;
+        }
+
+        .report-date {
+            font-weight: bold;
+            font-size: 1.1rem;
+            color: var(--primary-color);
+        }
+
+        .report-meta {
+            font-size: 0.85rem;
+            color: var(--text-light);
+        }
+
+        .report-body {
+            margin-bottom: 15px;
+        }
+
+        .report-row {
+            margin-bottom: 8px;
+        }
+
+        .report-label {
+            font-weight: bold;
+            font-size: 0.85rem;
+            color: var(--text-light);
+            display: inline-block;
+            width: 80px;
+        }
+
+        .report-content {
+            white-space: pre-wrap;
+            margin-top: 5px;
+            background: #f9f9f9;
+            padding: 10px;
+            border-radius: 4px;
+        }
+
+        .report-actions {
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        /* レスポンシブ調整 */
+        @media (max-width: 600px) {
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+            .toolbar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .report-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 5px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>Daily Report System</h1>
+        <p>日々の業務を記録・管理する</p>
+    </header>
+
+    <div class="card">
+        <h2 style="margin-bottom: 15px; font-size: 1.2rem;" id="form-title">新規日報作成</h2>
+        <form id="report-form">
+            <input type="hidden" id="report-id">
+
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="date">日付 *</label>
+                    <input type="date" id="date" required>
+                </div>
+                <div class="form-group">
+                    <label for="category">作業項目 *</label>
+                    <input type="text" id="category" placeholder="例: 開発、MTG、調査" required>
+                </div>
+            </div>
+
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="start-time">出勤時間 *</label>
+                    <input type="time" id="start-time" required>
+                </div>
+                <div class="form-group">
+                    <label for="end-time">退勤時間 *</label>
+                    <input type="time" id="end-time" required>
+                </div>
+                <div class="form-group">
+                    <label for="duration">作業時間 (h) *</label>
+                    <input type="number" id="duration" step="0.5" placeholder="例: 8.0" required>
+                </div>
+            </div>
+
+            <div class="form-group full-width">
+                <label for="content">業務内容 *</label>
+                <textarea id="content" placeholder="具体的な業務内容を入力してください..." required></textarea>
+            </div>
+
+            <div class="form-group full-width">
+                <label for="reflection">振り返り / 明日の予定 *</label>
+                <textarea id="reflection" placeholder="本日の反省点や次回の目標など" required></textarea>
+            </div>
+
+            <button type="submit" class="btn btn-primary" id="submit-btn">日報を保存</button>
+            <button type="button" class="btn btn-secondary" id="cancel-btn" style="display:none; margin-top:10px; width:100%;">キャンセル</button>
+        </form>
+    </div>
+
+    <div class="toolbar">
+        <div class="search-box">
+            <input type="text" id="search-input" placeholder="日付、項目、内容で検索...">
+        </div>
+        <button class="btn btn-secondary" onclick="exportCSV()">CSVエクスポート</button>
+    </div>
+
+    <div id="report-list-container">
+        <ul id="report-list" class="report-list">
+            </ul>
+    </div>
+</div>
+
+<script>
+    // 定数と状態管理
+    const STORAGE_KEY = 'daily_reports_data_v1';
+    let reports = [];
+    let isEditing = false;
+
+    // DOM要素の取得
+    const form = document.getElementById('report-form');
+    const formTitle = document.getElementById('form-title');
+    const submitBtn = document.getElementById('submit-btn');
+    const cancelBtn = document.getElementById('cancel-btn');
+    const reportListElement = document.getElementById('report-list');
+    const searchInput = document.getElementById('search-input');
+
+    // 初期化処理
+    document.addEventListener('DOMContentLoaded', () => {
+        loadReports();
+        renderReports();
+
+        // 今日の日付をデフォルトセット
+        document.getElementById('date').valueAsDate = new Date();
+    });
+
+    // データの読み込み
+    function loadReports() {
+        const storedData = localStorage.getItem(STORAGE_KEY);
+        if (storedData) {
+            reports = JSON.parse(storedData);
+        }
+    }
+
+    // データの保存
+    function saveToStorage() {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(reports));
+    }
+
+    // フォーム送信（新規作成・更新）
+    form.addEventListener('submit', (e) => {
+        e.preventDefault();
+
+        const reportData = {
+            id: isEditing ? document.getElementById('report-id').value : Date.now().toString(),
+            date: document.getElementById('date').value,
+            category: document.getElementById('category').value,
+            startTime: document.getElementById('start-time').value,
+            endTime: document.getElementById('end-time').value,
+            duration: document.getElementById('duration').value,
+            content: document.getElementById('content').value,
+            reflection: document.getElementById('reflection').value,
+            createdAt: isEditing ? null : new Date().toISOString() // ソート用に作成日時保持
+        };
+
+        if (isEditing) {
+            // 更新処理
+            const index = reports.findIndex(r => r.id === reportData.id);
+            if (index !== -1) {
+                // created_atは維持する
+                reportData.createdAt = reports[index].createdAt;
+                reports[index] = reportData;
+                alert('日報を更新しました。');
+            }
+        } else {
+            // 新規作成処理
+            reports.push(reportData);
+            alert('日報を保存しました。');
+        }
+
+        saveToStorage();
+        resetForm();
+        renderReports();
+    });
+
+    // 検索機能
+    searchInput.addEventListener('input', (e) => {
+        const keyword = e.target.value.toLowerCase();
+        renderReports(keyword);
+    });
+
+    // リストの描画
+    function renderReports(filterKeyword = '') {
+        reportListElement.innerHTML = '';
+
+        // 日付の降順（新しい順）でソート
+        const sortedReports = [...reports].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        // フィルタリング
+        const filteredReports = sortedReports.filter(report => {
+            if (!filterKeyword) return true;
+            return (
+                report.date.includes(filterKeyword) ||
+                report.category.toLowerCase().includes(filterKeyword) ||
+                report.content.toLowerCase().includes(filterKeyword) ||
+                report.reflection.toLowerCase().includes(filterKeyword)
+            );
+        });
+
+        if (filteredReports.length === 0) {
+            reportListElement.innerHTML = '<li style="text-align:center; color:#777; padding:20px;">日報が見つかりません。</li>';
+            return;
+        }
+
+        filteredReports.forEach(report => {
+            const li = document.createElement('li');
+            li.className = 'report-item';
+            li.innerHTML = `
+                <div class="report-header">
+                    <span class="report-date">${report.date} <span style="font-size:0.8em; color:#666; font-weight:normal;">(${report.category})</span></span>
+                    <span class="report-meta">
+                        ${report.startTime} - ${report.endTime} (${report.duration}h)
+                    </span>
+                </div>
+                <div class="report-body">
+                    <div class="report-row">
+                        <div class="report-label">業務内容</div>
+                        <div class="report-content">${escapeHtml(report.content)}</div>
+                    </div>
+                    <div class="report-row">
+                        <div class="report-label">振り返り</div>
+                        <div class="report-content">${escapeHtml(report.reflection)}</div>
+                    </div>
+                </div>
+                <div class="report-actions">
+                    <button class="btn btn-edit" onclick="editReport('${report.id}')">編集</button>
+                    <button class="btn btn-danger" onclick="deleteReport('${report.id}')">削除</button>
+                </div>
+            `;
+            reportListElement.appendChild(li);
+        });
+    }
+
+    // 削除機能
+    window.deleteReport = (id) => {
+        if (confirm('本当にこの日報を削除しますか？')) {
+            reports = reports.filter(r => r.id !== id);
+            saveToStorage();
+            renderReports(searchInput.value);
+            // 編集中に削除された場合フォームをリセット
+            if (isEditing && document.getElementById('report-id').value === id) {
+                resetForm();
+            }
+        }
+    };
+
+    // 編集機能（フォームへの流し込み）
+    window.editReport = (id) => {
+        const report = reports.find(r => r.id === id);
+        if (report) {
+            document.getElementById('report-id').value = report.id;
+            document.getElementById('date').value = report.date;
+            document.getElementById('category').value = report.category;
+            document.getElementById('start-time').value = report.startTime;
+            document.getElementById('end-time').value = report.endTime;
+            document.getElementById('duration').value = report.duration;
+            document.getElementById('content').value = report.content;
+            document.getElementById('reflection').value = report.reflection;
+
+            // UI変更
+            isEditing = true;
+            formTitle.textContent = '日報の編集';
+            submitBtn.textContent = '更新する';
+            submitBtn.classList.remove('btn-primary');
+            submitBtn.classList.add('btn-edit'); // 色を変える
+            cancelBtn.style.display = 'inline-block';
+
+            // フォームまでスクロール
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    };
+
+    // フォームリセット
+    function resetForm() {
+        form.reset();
+        document.getElementById('report-id').value = '';
+        isEditing = false;
+        formTitle.textContent = '新規日報作成';
+        submitBtn.textContent = '日報を保存';
+        submitBtn.classList.add('btn-primary');
+        submitBtn.classList.remove('btn-edit');
+        cancelBtn.style.display = 'none';
+
+        // 日付だけ今日に戻す
+        document.getElementById('date').valueAsDate = new Date();
+    }
+
+    // キャンセルボタン
+    cancelBtn.addEventListener('click', resetForm);
+
+    // CSVエクスポート機能
+    window.exportCSV = () => {
+        if (reports.length === 0) {
+            alert('出力するデータがありません。');
+            return;
+        }
+
+        // BOMを付加してExcelでの文字化けを防ぐ
+        let csvContent = "\uFEFF";
+
+        // ヘッダー
+        const headers = ["ID", "日付", "作業項目", "出勤時間", "退勤時間", "作業時間", "業務内容", "振り返り"];
+        csvContent += headers.join(",") + "\n";
+
+        // データ行
+        reports.forEach(r => {
+            const row = [
+                r.id,
+                r.date,
+                `"${r.category.replace(/"/g, '""')}"`, // エスケープ処理
+                r.startTime,
+                r.endTime,
+                r.duration,
+                `"${r.content.replace(/"/g, '""')}"`,
+                `"${r.reflection.replace(/"/g, '""')}"`
+            ];
+            csvContent += row.join(",") + "\n";
+        });
+
+        // ダウンロードリンク作成
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        const fileName = `daily_report_${new Date().toISOString().slice(0,10)}.csv`;
+
+        link.setAttribute("href", url);
+        link.setAttribute("download", fileName);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
+    // XSS対策用エスケープ
+    function escapeHtml(unsafe) {
+        return unsafe
+             .replace(/&/g, "&amp;")
+             .replace(/</g, "&lt;")
+             .replace(/>/g, "&gt;")
+             .replace(/"/g, "&quot;")
+             .replace(/'/g, "&#039;");
+    }
+</script>
+
+</body>
+</html>
